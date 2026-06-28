@@ -1,29 +1,140 @@
+name: nestiku
+
 services:
-  nestiku:
-    build: .
-    container_name: nestiku
+  Nestiku:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/maroishiku/nestiku:latest
+    container_name: Nestiku
+    hostname: Nestiku
+    user: "10001:10001"
     restart: unless-stopped
-    ports:
-      - "8503:8080"
+    init: true
+    read_only: true
+    privileged: false
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.5
+    cpu_shares: 90
+    mem_limit: "268435456"
+    pids_limit: 128
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "268435456"
+          pids: 128
+        reservations:
+          devices: []
     environment:
       NODE_ENV: production
       PORT: "8080"
       HOST: "0.0.0.0"
       SESSION_SECRET: "${SESSION_SECRET:?Bitte SESSION_SECRET in .env setzen}"
       ISHIKU_SETUP_SECRET_FILE: "/run/secrets/nestiku_setup_secret"
-      NESTIKU_DATA_DIR: "/app/data"
+      NESTIKU_DATA_DIR: "/data"
+      ISHIKU_DATA_DIR: "/data"
+      ISHIKU_LOG_LEVEL: "${ISHIKU_LOG_LEVEL:-info}"
       TZ: "${TZ:-Europe/Berlin}"
+    ports:
+      - target: 8080
+        published: "8503"
+        protocol: tcp
     volumes:
-      - ./data:/app/data
+      - type: bind
+        source: ./data
+        target: /data
     secrets:
       - nestiku_setup_secret
+    tmpfs:
+      - /tmp:size=32m,mode=1777
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:8080/readyz >/dev/null 2>&1 || exit 1
       interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 15s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-file: "3"
+        max-size: 5m
+    labels:
+      icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+      org.opencontainers.image.description: Personal startpage with secure first-run setup, private link dashboard and local JSON storage.
+      org.opencontainers.image.source: https://github.com/MaroIshiku/nestiku
+      org.opencontainers.image.title: Nestiku - Personal Startpage
+      org.opencontainers.image.url: https://github.com/MaroIshiku/nestiku
+    stop_grace_period: 10s
+    stop_signal: SIGTERM
+    devices: []
+    networks:
+      - Nestiku
+
+networks:
+  Nestiku:
+    name: Nestiku
+    driver: bridge
 
 secrets:
   nestiku_setup_secret:
     file: ./secrets/setup_secret.txt
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  author: MaroIshiku
+  category: Utilities
+  description:
+    de_de: Private persoenliche Startseite mit sicherem Erst-Setup, Link-Dashboard, Suche, Wetter und lokalem JSON-Speicher.
+    en_us: Private personal startpage with secure first-run setup, link dashboard, search, weather and local JSON storage.
+  developer: MaroIshiku
+  hostname: ""
+  icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+  index: /
+  is_uncontrolled: false
+  main: Nestiku
+  port_map: "8503"
+  scheme: http
+  store_app_id: Nestiku
+  tagline:
+    de_de: Deine ruhige, private und sichere Personal Startpage.
+    en_us: Your calm, private and secure personal startpage.
+  thumbnail: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+  tips:
+    before_install:
+      de_de: >
+        Pflicht: Setze SESSION_SECRET in .env auf einen langen zufaelligen Wert.
+        Lege danach secrets/setup_secret.txt mit einem zweiten langen zufaelligen
+        Setup-Secret an.
+
+
+        Persistente Daten liegen standardmaessig im lokalen Ordner ./data und
+        werden im Container nach /data gemountet. Der Container laeuft read-only,
+        ohne Privilegien und als UID/GID 10001.
+
+
+        Veroeffentliche die WebUI ueber HTTPS, wenn du die Startpage ausserhalb
+        deines lokalen Netzes erreichbar machst.
+      en_us: >
+        Required: set SESSION_SECRET in .env to a long random value. Then create
+        secrets/setup_secret.txt with a second long random setup secret.
+
+
+        Persistent data is stored in the local ./data folder by default and is
+        mounted into the container at /data. The container runs read-only,
+        without privileges and as UID/GID 10001.
+
+
+        Publish the WebUI through HTTPS if you expose the startpage outside your
+        local network.
+  title:
+    custom: Nestiku - Personal Startpage
+    de_de: Nestiku
+    en_us: Nestiku
