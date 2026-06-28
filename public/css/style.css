@@ -1,0 +1,365 @@
+@import url("./psu/components.css");
+
+.nestiku-main {
+  gap: var(--space-4);
+}
+
+.nestiku-dashboard {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.nestiku-hero {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.nestiku-time {
+  margin: 0;
+  font-size: clamp(44px, 18vw, 76px);
+  line-height: 0.95;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.nestiku-greeting {
+  margin: 0;
+  font-size: var(--type-title-large-size);
+  line-height: var(--type-title-large-line);
+  font-weight: 760;
+}
+
+.nestiku-date {
+  margin: 0;
+  color: var(--color-on-primary-container);
+  opacity: 0.78;
+  font-size: var(--type-body-medium-size);
+  line-height: var(--type-body-medium-line);
+}
+
+.nestiku-search {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.nestiku-search-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nestiku-search-row svg {
+  position: absolute;
+  inset-inline-start: var(--space-4);
+  inline-size: 22px;
+  block-size: 22px;
+  color: var(--color-on-surface-muted);
+  pointer-events: none;
+}
+
+.nestiku-search-row .psu-search-field {
+  padding-inline-start: 48px;
+  padding-inline-end: 72px;
+}
+
+.nestiku-search-badge {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  min-inline-size: 48px;
+  min-block-size: 34px;
+  border-radius: var(--radius-pill);
+  display: inline-grid;
+  place-items: center;
+  background: var(--color-secondary-container);
+  color: var(--color-on-secondary-container);
+  font-size: var(--type-label-medium-size);
+  line-height: var(--type-label-medium-line);
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.nestiku-section-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.nestiku-section-title {
+  margin: 0;
+  font-size: var(--type-title-medium-size);
+  line-height: var(--type-title-medium-line);
+  font-weight: 760;
+}
+
+.nestiku-section-meta {
+  margin: 0;
+  color: var(--color-on-surface-muted);
+  font-size: var(--type-label-medium-size);
+  line-height: var(--type-label-medium-line);
+  font-weight: 650;
+}
+
+.nestiku-pager {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin-inline: calc(var(--app-shell-mobile-padding) * -1);
+  padding-inline: var(--app-shell-mobile-padding);
+  padding-block: var(--space-1);
+}
+
+.nestiku-pager::-webkit-scrollbar {
+  display: none;
+}
+
+.nestiku-page {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+}
+
+.nestiku-links-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.nestiku-link-card {
+  min-block-size: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  text-align: start;
+  color: var(--color-on-surface);
+  text-decoration: none;
+}
+
+.nestiku-link-card:active {
+  transform: scale(0.99);
+}
+
+.nestiku-link-icon {
+  inline-size: 46px;
+  block-size: 46px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  font-weight: 850;
+}
+
+.nestiku-color-0 { background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.nestiku-color-1 { background: var(--color-secondary-container); color: var(--color-on-secondary-container); }
+.nestiku-color-2 { background: var(--color-tertiary-container); color: var(--color-on-tertiary-container); }
+.nestiku-color-3 { background: var(--color-success-container); color: var(--color-on-success-container); }
+.nestiku-color-4 { background: var(--color-warning-container); color: var(--color-on-warning-container); }
+.nestiku-color-5 { background: var(--color-danger-container); color: var(--color-on-danger-container); }
+.nestiku-color-6 { background: var(--color-info-container); color: var(--color-on-info-container); }
+.nestiku-color-7 { background: color-mix(in srgb, var(--color-primary-container) 72%, var(--color-surface-soft)); color: var(--color-on-primary-container); }
+.nestiku-color-8 { background: color-mix(in srgb, var(--color-secondary-container) 72%, var(--color-surface-soft)); color: var(--color-on-secondary-container); }
+.nestiku-color-9 { background: color-mix(in srgb, var(--color-tertiary-container) 72%, var(--color-surface-soft)); color: var(--color-on-tertiary-container); }
+
+.nestiku-link-icon img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.nestiku-link-title {
+  margin: 0;
+  font-size: var(--type-title-medium-size);
+  line-height: var(--type-title-medium-line);
+  font-weight: 760;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nestiku-link-domain {
+  margin: 2px 0 0;
+  color: var(--color-on-surface-muted);
+  font-size: var(--type-label-medium-size);
+  line-height: var(--type-label-medium-line);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nestiku-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.nestiku-dot {
+  inline-size: 9px;
+  block-size: 9px;
+  border: 0;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-outline);
+}
+
+.nestiku-dot[aria-current="true"] {
+  inline-size: 24px;
+  background: var(--color-primary);
+}
+
+.nestiku-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.nestiku-empty .psu-logo-frame {
+  inline-size: 64px;
+  block-size: 64px;
+}
+
+.nestiku-admin-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.nestiku-form-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.nestiku-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.nestiku-link-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.nestiku-link-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nestiku-link-row.is-editing {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.nestiku-link-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.nestiku-color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+}
+
+.nestiku-color-button {
+  min-block-size: 44px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-outline);
+  background: var(--color-primary-container);
+}
+
+.nestiku-color-button.is-selected {
+  border-color: var(--color-primary);
+}
+
+.nestiku-toast {
+  position: fixed;
+  z-index: 100;
+  inset-inline: var(--space-4);
+  inset-block-end: calc(var(--space-4) + env(safe-area-inset-bottom));
+  max-inline-size: 480px;
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-outline);
+  background: var(--color-surface-raised);
+  color: var(--color-on-surface);
+  box-shadow: var(--shadow-floating);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity var(--duration-normal) var(--ease-standard), transform var(--duration-normal) var(--ease-standard);
+}
+
+.nestiku-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.nestiku-toast.error {
+  border-color: var(--color-danger);
+}
+
+.nestiku-toast.success {
+  border-color: var(--color-success);
+}
+
+.nestiku-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.nestiku-theme-button {
+  justify-content: flex-start;
+}
+
+.nestiku-geocode-results {
+  display: none;
+}
+
+.nestiku-geocode-results.show {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (min-width: 760px) {
+  .nestiku-dashboard {
+    grid-template-columns: minmax(320px, 0.85fr) minmax(420px, 1.15fr);
+    align-items: start;
+  }
+
+  .nestiku-hero {
+    position: sticky;
+    inset-block-start: 96px;
+  }
+
+  .nestiku-pager {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  .nestiku-links-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nestiku-admin-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .nestiku-theme-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .nestiku-field-row {
+    grid-template-columns: 1fr;
+  }
+}

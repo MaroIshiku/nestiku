@@ -1,0 +1,55 @@
+services:
+  nestiku:
+    image: node:20-alpine
+    container_name: nestiku
+    restart: unless-stopped
+    working_dir: /app
+    init: true
+    ports:
+      - "${BIND_IP:-127.0.0.1}:${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      TZ: "${TZ:-Europe/Berlin}"
+      SESSION_SECRET: ${SESSION_SECRET:?Bitte SESSION_SECRET in .env setzen}
+      ISHIKU_APP_URL: "${ISHIKU_APP_URL:-}"
+      ISHIKU_BASE_PATH: "${ISHIKU_BASE_PATH:-/}"
+      ISHIKU_DATA_DIR: "/data"
+      ISHIKU_LOG_LEVEL: "${ISHIKU_LOG_LEVEL:-info}"
+      ISHIKU_SETUP_SECRET_FILE: "/run/secrets/ishiku_setup_secret"
+      FORCE_HTTPS: "${FORCE_HTTPS:-true}"
+      REQUIRE_MOBILE: "${REQUIRE_MOBILE:-false}"
+    volumes:
+      - ./server.js:/app/server.js:ro
+      - ./app.manifest.json:/app/app.manifest.json:ro
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - ./lib:/app/lib:ro
+      - ./public:/app/public:ro
+      - ./data:/data
+      - nestiku_node_modules:/app/node_modules
+    secrets:
+      - ishiku_setup_secret
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        if [ ! -d /app/node_modules/express ] || [ /app/package-lock.json -nt /app/node_modules/.package-lock.json ]; then
+          npm ci --omit=dev --no-audit --no-fund
+        fi
+        exec node server.js
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+secrets:
+  ishiku_setup_secret:
+    file: ./secrets/setup_secret.txt
+
+volumes:
+  nestiku_node_modules:

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="de" data-theme="lavender" data-mode="system" data-resolved-mode="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFFBFF">
+  <meta name="color-scheme" content="light dark">
+  <title>Nestiku</title>
+  <link rel="icon" href="/assets/logos/nestiku.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="icon-sprite" aria-hidden="true"></div>
+  <div class="psu-app-shell">
+    <header class="psu-app-header" data-psu-app-header>
+      <div class="psu-app-header__inner">
+        <div class="psu-app-symbol" aria-hidden="true">
+          <img data-psu-app-logo src="/assets/logos/nestiku.png" alt="">
+          <svg data-psu-fallback-symbol aria-hidden="true"><use href="#psu-icon-home"></use></svg>
+        </div>
+        <div class="psu-app-title-stack">
+          <h1 class="psu-app-title" data-psu-app-name>Nestiku</h1>
+          <p class="psu-app-subtitle" data-psu-app-subtitle>Personal Startpage</p>
+        </div>
+        <div class="psu-spacer"></div>
+        <button class="psu-avatar-button" type="button" data-psu-open="#profile-sheet" id="avatar-button" aria-label="Profil und Einstellungen">N</button>
+      </div>
+    </header>
+
+    <main class="psu-main nestiku-main">
+      <div class="nestiku-dashboard">
+        <section class="psu-hero-card nestiku-hero" aria-labelledby="greeting">
+          <div>
+            <p class="nestiku-date" id="date"></p>
+            <p class="nestiku-time" id="time">--:--</p>
+            <h2 class="nestiku-greeting" id="greeting">Hallo</h2>
+          </div>
+          <form class="nestiku-search" id="search-form" role="search" method="get">
+            <label class="psu-visually-hidden" for="search-input">Suchen oder URL eingeben</label>
+            <div class="nestiku-search-row">
+              <svg aria-hidden="true"><use href="#psu-icon-search"></use></svg>
+              <input class="psu-search-field" id="search-input" name="q" type="search" placeholder="Suchen oder URL eingeben" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+              <span class="nestiku-search-badge" id="search-badge">DDG</span>
+            </div>
+          </form>
+        </section>
+
+        <section class="psu-card" aria-labelledby="links-title">
+          <div class="nestiku-section-header">
+            <div>
+              <h2 class="nestiku-section-title" id="links-title">Schnellzugriff</h2>
+              <p class="nestiku-section-meta" id="page-indicator"></p>
+            </div>
+            <a class="psu-button psu-button--text" href="/admin">Verwalten</a>
+          </div>
+          <div class="nestiku-pager" id="pager"></div>
+          <div class="nestiku-dots" id="page-dots"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="psu-backdrop" id="profile-sheet" hidden>
+    <section class="psu-center-sheet" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+      <div class="psu-sheet-header">
+        <span></span>
+        <h2 class="psu-sheet-title" id="profile-title">Nestiku</h2>
+        <button class="psu-icon-button" type="button" data-psu-close aria-label="Schliessen"><svg><use href="#psu-icon-close"></use></svg></button>
+      </div>
+      <div class="psu-account-card">
+        <div class="psu-account-avatar" id="profile-avatar">N</div>
+        <div>
+          <p class="psu-account-name" id="profile-name">Nestiku</p>
+          <p class="psu-account-id" id="profile-id">Personal Startpage</p>
+        </div>
+      </div>
+      <div class="psu-list">
+        <a class="psu-list-row" href="/admin">
+          <svg class="psu-list-row__icon" aria-hidden="true"><use href="#psu-icon-admin"></use></svg>
+          <span>
+            <span class="psu-list-row__label">Adminbereich</span>
+            <span class="psu-list-row__support">Links, Standort, Wetter und Anmeldung</span>
+          </span>
+        </a>
+        <button class="psu-list-row" type="button" data-psu-open="#appearance-sheet">
+          <svg class="psu-list-row__icon" aria-hidden="true"><use href="#psu-icon-palette"></use></svg>
+          <span>
+            <span class="psu-list-row__label">Darstellung</span>
+            <span class="psu-list-row__support">Theme und Modus</span>
+          </span>
+        </button>
+        <button class="psu-list-row" type="button" data-psu-open="#about-sheet">
+          <svg class="psu-list-row__icon" aria-hidden="true"><use href="#psu-icon-info"></use></svg>
+          <span>
+            <span class="psu-list-row__label">About</span>
+            <span class="psu-list-row__support">App-Informationen</span>
+          </span>
+        </button>
+        <button class="psu-list-row" type="button" data-logout>
+          <svg class="psu-list-row__icon" aria-hidden="true"><use href="#psu-icon-logout"></use></svg>
+          <span>
+            <span class="psu-list-row__label">Logout</span>
+            <span class="psu-list-row__support">Session beenden</span>
+          </span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div class="psu-backdrop" id="appearance-sheet" hidden>
+    <section class="psu-center-sheet" role="dialog" aria-modal="true" aria-labelledby="appearance-title">
+      <div class="psu-sheet-header">
+        <span></span>
+        <h2 class="psu-sheet-title" id="appearance-title">Darstellung</h2>
+        <button class="psu-icon-button" type="button" data-psu-close aria-label="Schliessen"><svg><use href="#psu-icon-close"></use></svg></button>
+      </div>
+      <h3 class="psu-card-title">Theme</h3>
+      <div class="nestiku-theme-grid" data-theme-picker></div>
+      <h3 class="psu-card-title">Modus</h3>
+      <div class="psu-segmented-control" data-mode-picker></div>
+    </section>
+  </div>
+
+  <div class="psu-backdrop" id="about-sheet" hidden>
+    <section class="psu-center-sheet" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <div class="psu-sheet-header">
+        <span></span>
+        <h2 class="psu-sheet-title" id="about-title">About</h2>
+        <button class="psu-icon-button" type="button" data-psu-close aria-label="Schliessen"><svg><use href="#psu-icon-close"></use></svg></button>
+      </div>
+      <div class="nestiku-empty">
+        <div class="psu-logo-frame" aria-hidden="true">
+          <img data-psu-app-logo src="/assets/logos/nestiku.png" alt="">
+          <svg data-psu-fallback-symbol><use href="#psu-icon-home"></use></svg>
+        </div>
+        <div>
+          <h3 class="psu-card-title" data-psu-app-name>Nestiku</h3>
+          <p class="psu-card-text" data-psu-app-subtitle>Personal Startpage</p>
+        </div>
+      </div>
+      <div class="psu-technical-card">
+        <div>App-ID</div>
+        <div class="psu-technical-value">nestiku</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="nestiku-toast" data-nestiku-toast role="status" aria-live="polite"></div>
+
+  <script type="module" src="/js/start.js"></script>
+</body>
+</html>
