@@ -1,150 +1,105 @@
 # Nestiku
 
-Personal Startpage
+Personal Startpage fuer private Self-Hosting-Setups.
 
-> Private, self-hosted Startseite im gemeinsamen Pixel Soft Utility Designsystem.
-
-## Kurzbeschreibung
-
-Nestiku ist eine self-hosted Web-App aus der ishiku-Familie. Die App ist fuer private oder kleine eigene Deployments gedacht und bietet eine geschuetzte persoenliche Startseite mit Suche, Wetter, Schnellzugriffen und Adminbereich.
-
-## Teil der ishiku-Familie
-
-Nestiku verwendet die gemeinsame ishiku Oberflaeche:
-
-- ruhige, abgerundete Pixel-Soft-Utility-Komponenten
-- sechs gemeinsame Themes: Lavender, Mint, Sky, Amber, Rose und Graphite
-- Light, Dark und System Mode
-- einheitlicher AppHeader, Profil-/Einstellungs-Sheets und About/Admin-Bereiche
-- einheitliches First-Run-Setup fuer den ersten Adminaccount
-
-Die App soll sich bewusst wie Teil einer gemeinsamen Suite anfuehlen, nicht wie eine separate Marke mit eigener Designsprache.
+Nestiku ist eine kleine, sichere Startseiten-App mit Suche, Wetter, Schnellzugriffen, First-Run-Setup und Adminbereich. Die Oberflaeche folgt dem gemeinsamen Pixel Soft Utility Designkonzept: ruhig, abgerundet, mobil gut bedienbar und auf Desktop als klares Dashboard.
 
 ## Funktionen
 
-- persoenliche Startseite mit Uhr, Begruessung, Wetter und Suchfeld
-- Schnellzugriffe mit Pagination, lokalen Icon-/Favicon-Optionen und Adminsortierung
-- geschuetzter Adminbereich fuer Links, Standort, Wetter, Suche und Anmeldedaten
-- First-Run-Setup mit Setup-Secret und geschlossenem Registrierungsfenster nach dem ersten Admin
-- gemeinsame Pixel Soft Utility Themes mit persistiertem Theme und Mode
+- geschuetzte persoenliche Startseite mit Uhr, Begruessung, Wetter und Suche
+- Schnellzugriffe mit Farben, Texticons oder gecachten Favicons
+- Adminbereich fuer Links, Standort, Wetter, Suchmaschine und Anmeldedaten
+- First-Run-Setup fuer den ersten Adminaccount
+- sechs Themes: Lavender, Mint, Sky, Amber, Rose, Graphite
+- Light, Dark und System Mode
+- Healthcheck unter `/healthz`, Readiness unter `/readyz`
 
-## Tech Stack
-
-- Frontend: Vanilla HTML, CSS und ES-Module
-- Backend: Node.js mit Express
-- Datenhaltung: atomare JSON-Dateien im persistenten Datenordner
-- Deployment: Docker / Docker Compose
-
-## Installation
-
-### Docker Compose
+## Schnellstart
 
 ```bash
-mkdir -p nestiku/secrets nestiku/data
-cd nestiku
-cp docker-compose.example.yml docker-compose.yml
 cp .env.example .env
-```
-
-Lege anschliessend ein langes zufaelliges Setup-Secret an:
-
-```bash
+mkdir -p secrets data
 openssl rand -base64 48 > secrets/setup_secret.txt
-chmod 600 secrets/setup_secret.txt
 ```
 
-Setze in `.env` ein eigenes `SESSION_SECRET` und starte die App:
+Setze in `.env` ein eigenes `SESSION_SECRET`, dann:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-### Erstes Starten
+Die App ist danach erreichbar unter:
 
-Beim ersten Oeffnen zeigt Nestiku automatisch das Registrierungsfenster fuer den ersten Adminaccount an. Die normale App ist vorher nicht sichtbar.
+```txt
+http://localhost:8503
+```
 
-### Adminaccount erstellen
+Intern lauscht Nestiku auf Port `8080`. Docker Compose published bewusst `8503:8080`.
 
-Im Registrierungsfenster werden benoetigt:
+## Erstes Setup
+
+Beim ersten Oeffnen erscheint automatisch der Setup-Dialog. Du brauchst:
 
 - Setup-Secret aus `secrets/setup_secret.txt`
 - Anzeigename
 - Admin-Benutzername
-- optional E-Mail
 - Admin-Passwort
 
-Das Admin-Passwort muss mindestens 12 Zeichen lang sein und darf nicht mit dem Setup-Secret uebereinstimmen. Nach erfolgreicher Erstellung des ersten Adminaccounts wird die oeffentliche Registrierung automatisch geschlossen.
-
-## Konfiguration
-
-### Umgebungsvariablen
-
-| Variable | Beschreibung | Standard |
-| --- | --- | --- |
-| `SESSION_SECRET` | Geheimnis zum Signieren der Session-Cookies | Pflicht |
-| `TZ` | Zeitzone fuer Logs und Anzeige | `Europe/Berlin` |
-| `ISHIKU_APP_URL` | Oeffentliche URL der App | leer |
-| `ISHIKU_BASE_PATH` | Basis-Pfad hinter Reverse Proxy | `/` |
-| `ISHIKU_DATA_DIR` | Persistenter Datenpfad im Container | `/data` |
-| `ISHIKU_LOG_LEVEL` | Log-Level | `info` |
-| `ISHIKU_SETUP_SECRET_FILE` | Pfad zum Docker-Secret | `/run/secrets/ishiku_setup_secret` |
-| `ISHIKU_SETUP_SECRET` | Fallback-Secret als ENV, nur wenn kein Secret-File genutzt wird | leer |
-| `FORCE_HTTPS` | HTTPS hinter Reverse Proxy erzwingen | `true` |
-| `REQUIRE_MOBILE` | Zugriff auf mobile User-Agents begrenzen | `false` |
-
-### Docker Secrets
-
-Bevorzugt wird ein Docker/Compose Secret als Datei. In `docker-compose.example.yml` wird dieses Secret nach `/run/secrets/ishiku_setup_secret` gemountet.
-
-### Persistente Daten
-
-Persistente Daten liegen standardmaessig in:
-
-```txt
-/data
-```
-
-Sichere diesen Ordner regelmaessig, wenn die App produktiv genutzt wird.
+Das Admin-Passwort muss mindestens 12 Zeichen lang sein und darf nicht mit dem Setup-Secret uebereinstimmen. Nach dem ersten Adminaccount ist die oeffentliche Registrierung geschlossen.
 
 ## Sicherheit
 
-- Das Setup-Secret dient nur zur ersten Admin-Registrierung.
-- Das Admin-Passwort darf nicht dem Setup-Secret entsprechen.
-- Passwoerter werden mit scrypt gehasht und nicht im Klartext gespeichert.
-- Die oeffentliche Registrierung wird nach dem ersten Adminaccount geschlossen.
-- Session-Cookies sind HMAC-signiert, `HttpOnly` und `SameSite=Strict`.
-- Secrets, `.env`, Datenbanken, Logs und der Datenordner gehoeren nicht ins Repository.
+- keine Default-Zugangsdaten
+- Setup-Secret wird serverseitig geprueft
+- bevorzugt Docker Secret als Datei unter `/run/secrets/nestiku_setup_secret`
+- Passwoerter werden mit `scrypt` gehasht
+- Session-Cookie ist `HttpOnly`, `SameSite=Strict` und HMAC-signiert
+- Content Security Policy, `X-Frame-Options`, `nosniff`, `no-referrer`
+- API-Inputs werden serverseitig validiert
+- `data/`, `.env`, `secrets/`, Logs und Datenbanken werden nicht committed
 
-## Updates und Backup
+## Daten
 
-```bash
-docker compose pull
-docker compose up -d
+Persistente Daten liegen im Projektordner unter:
+
+```txt
+./data
 ```
 
-Vor Updates sollte der persistente Datenordner gesichert werden:
+Im Container ist dieser Ordner nach `/app/data` gemountet.
+
+Backup:
 
 ```bash
-tar -czf backup-nestiku-$(date +%Y%m%d).tar.gz data
+tar -czf nestiku-backup-$(date +%Y%m%d).tar.gz data
 ```
 
-## Entwicklung
+## Entwicklung ohne Docker
 
 ```bash
 npm install
-SESSION_SECRET=dev ISHIKU_SETUP_SECRET=dev-setup-secret npm run dev
+SESSION_SECRET=dev-secret ISHIKU_SETUP_SECRET=dev-setup-secret PORT=8080 npm run dev
 ```
 
-Codex soll bei Aenderungen das gemeinsame Pixel Soft Utility Designsystem beibehalten und keine app-spezifischen UI-Abweichungen einfuehren.
+## Struktur
+
+```txt
+.
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+├── src/
+│   ├── auth.js
+│   ├── server.js
+│   └── storage.js
+├── public/
+│   ├── app.js
+│   ├── index.html
+│   ├── styles.css
+│   └── assets/nestiku.png
+└── data/
+```
 
 ## Erstellt mit ChatGPT Codex
 
-Dieses Projekt wurde mit Unterstuetzung von ChatGPT Codex erstellt bzw. ueberarbeitet. Codex wurde verwendet, um Code, Struktur, UI-Komponenten und Dokumentation nach den Vorgaben der ishiku / Pixel Soft Utility Standards zu generieren.
-
-Die Verantwortung fuer Betrieb, Pruefung, Sicherheit und Veroeffentlichung liegt beim Repository-Betreiber.
-
-## Status und Lizenz
-
-Status: aktiv in Entwicklung
-
-Lizenz: nicht angegeben
+Dieses Projekt wurde mit Unterstuetzung von ChatGPT Codex erstellt bzw. ueberarbeitet. Betrieb, Pruefung, Sicherheit und Veroeffentlichung liegen beim Repository-Betreiber.

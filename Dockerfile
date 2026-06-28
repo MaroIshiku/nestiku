@@ -1,0 +1,20 @@
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=8080 \
+    HOST=0.0.0.0 \
+    NESTIKU_DATA_DIR=/app/data
+RUN addgroup -S nestiku && adduser -S nestiku -G nestiku
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY src ./src
+COPY public ./public
+RUN mkdir -p /app/data && chown -R nestiku:nestiku /app
+USER nestiku
+EXPOSE 8080
+CMD ["node", "src/server.js"]
