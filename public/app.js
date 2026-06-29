@@ -1,29 +1,30 @@
-const state = {
-  app: null,
-  setup: null,
-  authenticated: false,
-  user: null,
-  settings: null,
-  links: [],
-  searchEngines: {},
-  themes: ['lavender', 'mint', 'sky', 'amber', 'rose', 'graphite'],
-  modes: ['system', 'light', 'dark'],
-  weather: null,
-  editingLink: -1,
-  linkPage: 0,
-  activeAdminTab: 'settings',
-  clockTimer: null,
-  weatherTimer: null
-};
-
-const THEME_LABELS = { lavender: 'Lavender', mint: 'Mint', sky: 'Sky', amber: 'Amber', rose: 'Rose', graphite: 'Graphite' };
-const MODE_LABELS = { system: 'System', light: 'Light', dark: 'Dark' };
-const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+import { api } from './js/api.js';
+import {
+  $,
+  $$,
+  app,
+  debounce,
+  directUrl,
+  domain,
+  escapeAttr,
+  escapeHTML,
+  field,
+  iconOrText,
+  initials,
+  safeColor,
+  selectField,
+  toast
+} from './js/dom.js';
+import { icon } from './js/icons.js';
+import { closeSheet, openSheet, sheetHeader } from './js/sheets.js';
+import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js';
+import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js';
 
 boot();
 
 async function boot() {
   initTheme();
+  window.addEventListener('hashchange', handleHashRoute);
   await loadBootstrap();
   if (state.setup?.required) return renderSetup();
   if (!state.authenticated) return renderLogin();
@@ -153,6 +154,7 @@ async function submitLogin(event) {
 }
 
 function renderStart() {
+  closeSheet();
   clearTimers();
   app().innerHTML = shell(`
     <div class="dashboard">
@@ -221,6 +223,7 @@ function renderLinks() {
 }
 
 function renderAdmin() {
+  closeSheet();
   clearTimers();
   state.activeAdminTab ||= 'settings';
   app().innerHTML = shell(`
@@ -480,14 +483,48 @@ async function geocode(event) {
 function bindGlobalActions() {
   $$('[data-action="admin"]').forEach((el) => el.addEventListener('click', renderAdmin));
   $$('[data-action="start"]').forEach((el) => el.addEventListener('click', renderStart));
-  $$('[data-action="theme"]').forEach((el) => el.addEventListener('click', openThemeSheet));
+  $$('[data-action="theme"]').forEach((el) => el.addEventListener('click', () => renderAppearance($('[data-tab]') ? 'admin' : 'start')));
   $$('[data-action="profile"]').forEach((el) => el.addEventListener('click', openProfileSheet));
   $$('[data-action="info"]').forEach((el) => el.addEventListener('click', openInfoSheet));
 }
 
+function renderAppearance(returnTo = 'start') {
+  closeSheet();
+  clearTimers();
+  app().innerHTML = shell(`
+    <section class="hero-card">
+      <h2 class="card-title">Darstellung</h2>
+      <p class="card-text">Theme und Modus fuer Nestiku.</p>
+      <div class="actions">
+        <a class="button filled" href="#${escapeAttr(returnTo)}">Zurueck</a>
+        <a class="button tonal" href="#start">Startseite</a>
+      </div>
+    </section>
+    <section class="card">
+      <div class="section-head"><div><h2>Theme</h2><p>Farbwelt auswaehlen</p></div></div>
+      <div class="theme-grid">
+        ${state.themes.map((theme) => `<button class="button ${theme === getStoredTheme() ? 'filled' : 'outlined'}" data-theme="${theme}">${THEME_LABELS[theme] || theme}</button>`).join('')}
+      </div>
+      <div class="section-head"><div><h2>Modus</h2><p>Hell, dunkel oder System</p></div></div>
+      <div class="segmented">${state.modes.map((mode) => `<button data-mode="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>
+    </section>
+  `, `
+    <button class="avatar-button" type="button" data-action="profile" aria-label="Profil">${escapeHTML(initials(state.user?.displayName || state.user?.username))}</button>
+  `);
+  bindGlobalActions();
+  $$('[data-theme]').forEach((button) => button.addEventListener('click', () => {
+    applyTheme(button.dataset.theme, getStoredMode());
+    renderAppearance(returnTo);
+  }));
+  $$('[data-mode]').forEach((button) => button.addEventListener('click', () => {
+    applyTheme(getStoredTheme(), button.dataset.mode);
+    renderAppearance(returnTo);
+  }));
+}
+
 function openProfileSheet() {
   openSheet(`
-    <div class="sheet-head"><span></span><h2>Profil</h2><button class="icon-button" data-close aria-label="Schliessen">${icon('close')}</button></div>
+    ${sheetHeader('Profil')}
     <div class="account-card"><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div></div>
     <div class="list">
       <button class="list-row" data-sheet-admin>${icon('settings')}<span><strong>Adminbereich</strong><span class="support">Nestiku verwalten</span></span><span></span></button>
@@ -495,50 +532,46 @@ function openProfileSheet() {
       <button class="list-row" data-logout>${icon('logout')}<span><strong>Logout</strong><span class="support">Session beenden</span></span><span></span></button>
     </div>
   `);
+  bindSheetChrome();
   $('[data-sheet-admin]').addEventListener('click', () => { closeSheet(); renderAdmin(); });
-  $('[data-sheet-theme]').addEventListener('click', () => { closeSheet(); openThemeSheet(); });
+  $('[data-sheet-theme]').addEventListener('click', () => { closeSheet(); renderAppearance('profile'); });
   $('[data-logout]').addEventListener('click', logout);
-}
-
-function openThemeSheet() {
-  openSheet(`
-    <div class="sheet-head"><span></span><h2>Darstellung</h2><button class="icon-button" data-close aria-label="Schliessen">${icon('close')}</button></div>
-    <h3 class="card-title">Theme</h3>
-    <div class="theme-grid">
-      ${state.themes.map((theme) => `<button class="button ${theme === getStoredTheme() ? 'filled' : 'outlined'}" data-theme="${theme}">${THEME_LABELS[theme] || theme}</button>`).join('')}
-    </div>
-    <h3 class="card-title">Modus</h3>
-    <div class="segmented">${state.modes.map((mode) => `<button data-mode="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>
-  `);
-  $$('[data-theme]').forEach((button) => button.addEventListener('click', () => { applyTheme(button.dataset.theme, getStoredMode()); openThemeSheet(); }));
-  $$('[data-mode]').forEach((button) => button.addEventListener('click', () => { applyTheme(getStoredTheme(), button.dataset.mode); openThemeSheet(); }));
 }
 
 function openInfoSheet() {
   openSheet(`
-    <div class="sheet-head"><span></span><h2>Info</h2><button class="icon-button" data-close aria-label="Schliessen">${icon('close')}</button></div>
+    ${sheetHeader('Info')}
     <div class="empty"><div class="logo-large"><img src="/assets/nestiku.png" alt=""></div><div><h3 class="card-title">Nestiku</h3><p class="card-text">Personal Startpage</p></div></div>
-    <div class="technical-card">Port intern: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data: /app/data</div>
+    <div class="technical-card">Port intern: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data: /data</div>
   `);
+  bindSheetChrome();
 }
 
-function openSheet(html) {
-  closeSheet();
-  const node = document.createElement('div');
-  node.className = 'sheet-backdrop';
-  node.innerHTML = `<section class="sheet" role="dialog" aria-modal="true">${html}</section>`;
-  document.body.append(node);
-  node.addEventListener('click', (event) => { if (event.target === node || event.target.closest('[data-close]')) closeSheet(); });
-  document.addEventListener('keydown', escapeToClose);
+function bindSheetChrome({ onBack = null } = {}) {
+  $$('[data-sheet-action="close"], [data-close]').forEach((button) => button.addEventListener('click', closeSheet));
+  $$('[data-sheet-action="back"], [data-back]').forEach((button) => button.addEventListener('click', () => {
+    closeSheet();
+    if (onBack) onBack();
+  }));
 }
 
-function closeSheet() {
-  $('.sheet-backdrop')?.remove();
-  document.removeEventListener('keydown', escapeToClose);
-}
-
-function escapeToClose(event) {
-  if (event.key === 'Escape') closeSheet();
+function handleHashRoute() {
+  const route = location.hash.replace('#', '');
+  if (route === 'admin') {
+    history.replaceState(null, '', location.pathname);
+    renderAdmin();
+    return;
+  }
+  if (route === 'profile') {
+    history.replaceState(null, '', location.pathname);
+    renderStart();
+    openProfileSheet();
+    return;
+  }
+  if (route === 'start') {
+    history.replaceState(null, '', location.pathname);
+    renderStart();
+  }
 }
 
 async function logout() {
@@ -611,66 +644,4 @@ function clearTimers() {
   clearInterval(state.weatherTimer);
 }
 
-async function api(url, options = {}) {
-  const response = await fetch(url, {
-    method: options.method || 'GET',
-    headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-  return data;
-}
-
-function initTheme() {
-  const theme = getStoredTheme();
-  const mode = getStoredMode();
-  applyTheme(theme, mode, false);
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(getStoredTheme(), getStoredMode(), false));
-}
-
-function applyTheme(theme, mode, persist = true) {
-  if (!state.themes.includes(theme)) theme = 'lavender';
-  if (!state.modes.includes(mode)) mode = 'system';
-  const resolved = mode === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : mode;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.dataset.mode = mode;
-  document.documentElement.dataset.resolvedMode = resolved;
-  document.documentElement.style.colorScheme = resolved;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#141218' : '#f9f6ff');
-  if (persist) {
-    localStorage.setItem('nestiku-theme', theme);
-    localStorage.setItem('nestiku-mode', mode);
-  }
-}
-
-function getStoredTheme() { return localStorage.getItem('nestiku-theme') || 'lavender'; }
-function getStoredMode() { return localStorage.getItem('nestiku-mode') || 'system'; }
 function currentEngine() { return state.searchEngines[state.settings?.display?.searchEngine || 'duckduckgo'] || state.searchEngines.duckduckgo || { url: 'https://duckduckgo.com/', param: 'q', label: 'DDG' }; }
-function field(label, name, type = 'text', autocomplete = 'off', required = true, value = '', placeholder = '') { return `<label class="field"><span class="label">${label}</span><input class="input" name="${name}" type="${type}" autocomplete="${autocomplete}" ${required ? 'required' : ''} value="${escapeAttr(value ?? '')}" placeholder="${escapeAttr(placeholder)}"></label>`; }
-function selectField(label, name, options, selected) { return `<label class="field"><span class="label">${label}</span><select class="select" name="${name}">${options.map(([value, text]) => `<option value="${escapeAttr(value)}" ${String(value) === String(selected) ? 'selected' : ''}>${escapeHTML(text)}</option>`).join('')}</select></label>`; }
-function app() { return $('#app'); }
-function $(selector, root = document) { return root.querySelector(selector); }
-function $$(selector, root = document) { return [...root.querySelectorAll(selector)]; }
-function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
-function escapeAttr(value) { return escapeHTML(value).replace(/`/g, '&#96;'); }
-function initials(value) { const parts = String(value || 'N').trim().split(/\s+/); return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0].slice(0, 2)).toUpperCase(); }
-function isImage(value) { return /^(https?:|\/|\.{0,2}\/)/.test(value || '') || /\.(png|jpe?g|svg|webp|gif|ico)$/i.test(value || ''); }
-function iconOrText(iconValue, title) { return isImage(iconValue) ? `<img src="${escapeAttr(iconValue)}" alt="">` : escapeHTML(iconValue || initials(title)); }
-function safeColor(value) { return Number.isInteger(value) && value >= 0 && value <= 9 ? value : 0; }
-function domain(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; } }
-function directUrl(query) { if (/\s/.test(query)) return ''; const value = /^[a-z][a-z0-9+.-]*:\/\//i.test(query) ? query : `https://${query}`; try { const url = new URL(value); return url.hostname.includes('.') && ['http:', 'https:'].includes(url.protocol) ? url.toString() : ''; } catch { return ''; } }
-function debounce(fn, ms) { let timer; return (event) => { clearTimeout(timer); timer = setTimeout(() => fn(event), ms); }; }
-function toast(message, type = '') { const node = $('#toast'); node.textContent = message; node.className = `toast show ${type}`; clearTimeout(node.timer); node.timer = setTimeout(() => { node.className = 'toast'; }, 3200); }
-function icon(name) {
-  const paths = {
-    search: 'm19.6 21-6.3-6.3q-.75.6-1.72.95-.98.35-2.08.35-2.73 0-4.61-1.89Q3 12.23 3 9.5t1.89-4.61Q6.77 3 9.5 3t4.61 1.89Q16 6.77 16 9.5q0 1.1-.35 2.08-.35.97-.95 1.72l6.3 6.3-1.4 1.4Z',
-    palette: 'M12 22q-2.08 0-3.9-.79-1.83-.78-3.18-2.13-1.35-1.35-2.13-3.18Q2 14.08 2 12t.8-3.9q.8-1.82 2.17-3.17Q6.35 3.58 8.2 2.79 10.05 2 12.18 2q1.95 0 3.67.63 1.73.62 3 1.74 1.28 1.11 2.02 2.62.73 1.51.73 3.26 0 2.88-1.75 4.31Q18.1 16 15.7 16h-1.8q-.45 0-.72.31-.28.31-.28.69 0 .5.37.85.38.35.38.85 0 .68-.45 1.14-.45.46-1.2.16Z',
-    settings: 'M10.9 22q-.45 0-.78-.3-.34-.3-.4-.75l-.25-1.85q-.5-.2-.98-.47-.47-.28-.9-.6l-1.72.73q-.42.18-.84.02-.42-.15-.65-.55l-1.1-1.9q-.22-.4-.14-.85.08-.44.45-.72l1.48-1.12Q5 13.38 5 13v-2q0-.38.07-.75L3.6 9.13q-.37-.28-.45-.72-.08-.45.14-.85l1.1-1.9q.23-.4.65-.55.42-.16.84.02l1.72.73q.43-.32.9-.6.48-.27.98-.47l.25-1.85q.06-.45.4-.75.33-.3.78-.3h2.2q.45 0 .78.3.34.3.4.75l.25 1.85q.5.2.98.47.47.28.9.6l1.72-.73q.42-.18.84-.02.42.15.65.55l1.1 1.9q.22.4.14.85-.08.44-.45.72l-1.48 1.12q.07.37.07.75v2q0 .38-.07.75l1.48 1.12q.37.28.45.72.08.45-.14.85l-1.1 1.9q-.23.4-.65.55-.42.16-.84-.02l-1.72-.73q-.43.32-.9.6-.48.27-.98.47l-.25 1.85q-.06.45-.4.75-.33.3-.78.3h-2.2Z',
-    close: 'M12 13.4 7.1 18.3q-.28.28-.7.28-.43 0-.7-.28-.28-.27-.28-.7 0-.42.28-.7l4.9-4.9-4.9-4.9q-.28-.28-.28-.7 0-.43.28-.7.27-.28.7-.28.42 0 .7.28l4.9 4.9 4.9-4.9q.28-.28.7-.28.43 0 .7.28.28.27.28.7 0 .42-.28.7L13.4 12l4.9 4.9q.28.28.28.7 0 .43-.28.7-.27.28-.7.28-.42 0-.7-.28L12 13.4Z',
-    logout: 'M5 21q-.82 0-1.41-.59Q3 19.83 3 19V5q0-.82.59-1.41Q4.18 3 5 3h7v2H5v14h7v2H5Zm11-4-1.38-1.45L17.17 13H9v-2h8.17l-2.55-2.55L16 7l5 5-5 5Z',
-    info: 'M11 17h2v-6h-2v6Zm1-8q.43 0 .71-.29Q13 8.43 13 8t-.29-.71Q12.43 7 12 7t-.71.29Q11 7.57 11 8t.29.71q.28.29.71.29Zm0 13q-2.08 0-3.9-.79-1.83-.78-3.18-2.13-1.35-1.35-2.13-3.18Q2 14.08 2 12t.79-3.9q.78-1.83 2.13-3.18 1.35-1.35 3.18-2.13Q9.92 2 12 2t3.9.79q1.83.78 3.18 2.13 1.35 1.35 2.13 3.18.79 1.82.79 3.9t-.79 3.9q-.78 1.83-2.13 3.18-1.35 1.35-3.18 2.13-1.82.79-3.9.79Z',
-    up: 'M12 8 6 14l1.4 1.4L12 10.8l4.6 4.6L18 14Z'
-  };
-  return `<svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="${paths[name] || paths.info}"/></svg>`;
-}
