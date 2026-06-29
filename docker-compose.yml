@@ -95,8 +95,8 @@ x-casaos:
   author: MaroIshiku
   category: Utilities
   description:
-    de_de: Private persoenliche Startseite mit sicherem Erst-Setup, Link-Dashboard, Suche, Wetter und lokalem JSON-Speicher.
-    en_us: Private personal startpage with secure first-run setup, link dashboard, search, weather and local JSON storage.
+    de_de: Private personal startpage with secure first-run setup, bookmark dashboard, search, weather and local JSON storage.
+    en_us: Private personal startpage with secure first-run setup, bookmark dashboard, search, weather and local JSON storage.
   developer: MaroIshiku
   hostname: ""
   icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
@@ -107,26 +107,26 @@ x-casaos:
   scheme: http
   store_app_id: Nestiku
   tagline:
-    de_de: Deine ruhige, private und sichere Personal Startpage.
+    de_de: Your calm, private and secure personal startpage.
     en_us: Your calm, private and secure personal startpage.
   thumbnail: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
   tips:
     before_install:
       de_de: >
-        Empfohlen: Setze SESSION_SECRET auf einen langen zufaelligen Wert.
-        Wenn SESSION_SECRET leer bleibt, erzeugt Nestiku beim ersten Start ein
-        persistentes Secret unter /data/session_secret. Setze ISHIKU_SETUP_SECRET
-        vor dem ersten Start auf einen zweiten langen zufaelligen Wert.
+        Recommended: set SESSION_SECRET to a long random value. If
+        SESSION_SECRET is empty, Nestiku creates a persistent secret at
+        /data/session_secret on first start. Set ISHIKU_SETUP_SECRET to a second
+        long random value before the first start.
 
 
-        Persistente Daten liegen auf dem ZimaOS-Host unter
-        /DATA/AppData/ish_nestiku/data und
-        werden im Container nach /data gemountet. Der Container laeuft read-only,
-        ohne Privilegien und als UID/GID 10001.
+        Persistent data is stored on the ZimaOS host under
+        /DATA/AppData/ish_nestiku/data and is
+        mounted into the container at /data. The container runs read-only,
+        without privileges and as UID/GID 10001.
 
 
-        Veroeffentliche die WebUI ueber HTTPS, wenn du die Startpage ausserhalb
-        deines lokalen Netzes erreichbar machst.
+        Publish the WebUI through HTTPS if you expose the startpage outside your
+        local network.
       en_us: >
         Recommended: set SESSION_SECRET to a long random value. If
         SESSION_SECRET is empty, Nestiku creates a persistent secret at

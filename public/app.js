@@ -1,4 +1,4 @@
-import { api } from './js/api.js';
+import { api } from './js/api.js?v=20260630f';
 import {
   $,
   $$,
@@ -14,11 +14,11 @@ import {
   safeColor,
   selectField,
   toast
-} from './js/dom.js';
-import { icon } from './js/icons.js';
-import { closeSheet, openSheet, sheetHeader } from './js/sheets.js';
-import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js';
-import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js';
+} from './js/dom.js?v=20260630f';
+import { icon } from './js/icons.js?v=20260630f';
+import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260630f';
+import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260630f';
+import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260630f';
 
 boot();
 
@@ -77,8 +77,8 @@ function shell(content, actions = '') {
 function renderSetup() {
   const error = state.setup?.configured ? '' : `
     <div class="tonal-card">
-      <h2 class="card-title">Setup noch nicht bereit</h2>
-      <p class="card-text">${escapeHTML(state.setup?.error || 'Setup-Secret fehlt.')}</p>
+      <h2 class="card-title">Setup is not ready</h2>
+      <p class="card-text">${escapeHTML(state.setup?.error || 'Setup secret is missing.')}</p>
     </div>
   `;
   app().innerHTML = `
@@ -87,20 +87,20 @@ function renderSetup() {
         <div class="brand">
           <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
           <div>
-            <h1 id="setup-title">Admin einrichten</h1>
-            <p>Erstelle den ersten Adminaccount fuer Nestiku.</p>
+            <h1 id="setup-title">Create admin account</h1>
+            <p>Create the first administrator for Nestiku.</p>
           </div>
         </div>
         ${error}
         <form class="form" id="setup-form">
-          ${field('Setup-Secret', 'setupSecret', 'password', 'one-time-code')}
-          ${field('Anzeigename', 'displayName', 'text', 'name')}
-          ${field('Admin-Benutzername', 'username', 'text', 'username')}
-          ${field('E-Mail optional', 'email', 'email', 'email', false)}
-          ${field('Admin-Passwort', 'password', 'password', 'new-password')}
-          ${field('Passwort wiederholen', 'passwordConfirm', 'password', 'new-password')}
-          <div class="tonal-card card-text">Mindestens 12 Zeichen, nicht identisch mit Setup-Secret, Benutzername oder App-Name.</div>
-          <button class="button filled full" type="submit" ${state.setup?.configured ? '' : 'disabled'}>Adminaccount erstellen</button>
+          ${field('Setup secret', 'setupSecret', 'password', 'one-time-code')}
+          ${field('Display name', 'displayName', 'text', 'name')}
+          ${field('Admin username', 'username', 'text', 'username')}
+          ${field('Email optional', 'email', 'email', 'email', false)}
+          ${field('Admin password', 'password', 'password', 'new-password')}
+          ${field('Repeat password', 'passwordConfirm', 'password', 'new-password')}
+          <div class="tonal-card card-text">Use at least 12 characters. Do not reuse the setup secret, username or app name.</div>
+          <button class="button filled full" type="submit" ${state.setup?.configured ? '' : 'disabled'}>Create admin account</button>
         </form>
       </section>
     </main>
@@ -112,10 +112,10 @@ function renderSetup() {
 async function submitSetup(event) {
   event.preventDefault();
   const body = Object.fromEntries(new FormData(event.currentTarget).entries());
-  if (body.password !== body.passwordConfirm) return toast('Passwoerter stimmen nicht ueberein.', 'error');
-  if ((body.password || '').length < 12) return toast('Passwort ist zu kurz.', 'error');
+  if (body.password !== body.passwordConfirm) return toast('Passwords do not match.', 'error');
+  if ((body.password || '').length < 12) return toast('Password is too short.', 'error');
   await api('/api/setup/register', { method: 'POST', body });
-  toast('Adminaccount erstellt.');
+  toast('Admin account created.');
   await loadBootstrap();
   await loadAppData();
   renderStart();
@@ -133,9 +133,9 @@ function renderLogin() {
           </div>
         </div>
         <form class="form" id="login-form">
-          ${field('Benutzername', 'username', 'text', 'username')}
-          ${field('Passwort', 'password', 'password', 'current-password')}
-          <button class="button filled full" type="submit">Anmelden</button>
+          ${field('Username', 'username', 'text', 'username')}
+          ${field('Password', 'password', 'password', 'current-password')}
+          <button class="button filled full" type="submit">Sign in</button>
         </form>
       </section>
     </main>
@@ -157,34 +157,35 @@ function renderStart() {
   closeSheet();
   clearTimers();
   state.activeAdminTab ||= 'settings';
+  const display = state.settings.display || {};
   app().innerHTML = shell(`
     <div class="dashboard">
       <section class="hero-card hero" aria-labelledby="greeting">
         <p class="date" id="date"></p>
         <p class="time" id="time">--:--</p>
-        <h2 class="greeting" id="greeting">Hallo</h2>
+        <h2 class="greeting" id="greeting">Hello</h2>
         <form id="search-form" class="search-row" role="search">
-          <label class="visually-hidden" for="search-input">Suchen oder URL eingeben</label>
+          <label class="visually-hidden" for="search-input">Search or enter a URL</label>
           <svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="m19.6 21-6.3-6.3q-.75.6-1.72.95-.98.35-2.08.35-2.73 0-4.61-1.89Q3 12.23 3 9.5t1.89-4.61Q6.77 3 9.5 3t4.61 1.89Q16 6.77 16 9.5q0 1.1-.35 2.08-.35.97-.95 1.72l6.3 6.3-1.4 1.4ZM9.5 14q1.88 0 3.19-1.31Q14 11.38 14 9.5t-1.31-3.19Q11.38 5 9.5 5T6.31 6.31Q5 7.62 5 9.5t1.31 3.19Q7.62 14 9.5 14Z"/></svg>
-          <input class="input" id="search-input" type="search" placeholder="Suchen oder URL eingeben" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <input class="input" id="search-input" type="search" placeholder="Search or enter a URL" autocomplete="off" autocapitalize="off" spellcheck="false">
           <span class="search-badge">${escapeHTML(currentEngine().label)}</span>
         </form>
       </section>
       <section class="card">
         <div class="section-head">
           <div>
-            <h2>Schnellzugriff</h2>
-            <p>${state.editingLinks ? 'Bearbeitung aktiv' : (state.links.length ? `${state.links.length} Links` : 'Noch leer')}</p>
+            <h2>Bookmarks</h2>
+            <p>${state.editingLinks ? 'Editing enabled' : linkCountLabel()}</p>
           </div>
-          <button class="button ${state.editingLinks ? 'tonal' : 'text'}" type="button" data-action="links-edit">${state.editingLinks ? 'Fertig' : 'Bearbeiten'}</button>
+          <button class="button ${state.editingLinks ? 'tonal' : 'text'}" type="button" data-action="links-edit">${state.editingLinks ? 'Done' : 'Edit'}</button>
         </div>
+        ${state.editingLinks ? renderEditToolbar(display) : ''}
         ${renderLinks()}
-        ${state.editingLinks ? renderLinkTools() : ''}
       </section>
     </div>
   `, `
-    <button class="icon-button" type="button" data-action="links-edit" aria-label="Links bearbeiten">${icon('edit')}</button>
-    <button class="avatar-button" type="button" data-action="profile" aria-label="Profil">${escapeHTML(initials(state.user?.displayName || state.user?.username))}</button>
+    <button class="icon-button" type="button" data-action="links-edit" aria-label="Edit links">${icon('edit')}</button>
+    <button class="avatar-button" type="button" data-action="profile" aria-label="Profile">${escapeHTML(initials(state.user?.displayName || state.user?.username))}</button>
   `);
   bindGlobalActions();
   if (state.editingLinks) bindLinkEditor();
@@ -201,50 +202,34 @@ function renderStart() {
 
 function renderLinks() {
   if (!state.links.length) {
+    if (state.editingLinks) {
+      return `<div class="links-grid"><button class="card link-card add-link-card" type="button" data-link-add>${icon('plus')}<span>Add link</span></button></div>`;
+    }
     return `
       <div class="empty tonal-card">
         <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
         <div>
-          <h3 class="card-title">Noch keine Links</h3>
-          <p class="card-text">Lege deine ersten Schnellzugriffe direkt hier an.</p>
+          <h3 class="card-title">No links yet</h3>
+          <p class="card-text">Add your first bookmarks directly from this page.</p>
         </div>
-        <button class="button filled" type="button" data-action="links-edit">Links anlegen</button>
+        <button class="button filled" type="button" data-action="links-edit">Add links</button>
       </div>
     `;
   }
   const perPage = state.settings.display.linksPerPage || 6;
+  const linkView = state.settings.display.linkView === 'list' ? 'list' : 'grid';
   const pages = [];
   for (let index = 0; index < state.links.length; index += perPage) pages.push(state.links.slice(index, index + perPage));
   if (state.linkPage >= pages.length) state.linkPage = Math.max(0, pages.length - 1);
   const page = pages[state.linkPage] || [];
-  return `<div class="links-grid">${page.map((link) => `
-    ${state.editingLinks ? `<button class="card link-card editable-link" type="button" data-link-edit="${state.links.indexOf(link)}">` : `<a class="card link-card" href="${escapeAttr(link.url)}" rel="noopener noreferrer">`}
-      <span class="link-icon c${safeColor(link.color)}">${iconOrText(link.icon, link.title)}</span>
-      <span><span class="link-title">${escapeHTML(link.title)}</span><span class="link-domain">${escapeHTML(domain(link.url))}</span></span>
-      ${state.editingLinks ? `<span class="edit-chip">${icon('edit')}Bearbeiten</span>` : ''}
-    ${state.editingLinks ? '</button>' : '</a>'}
-  `).join('')}</div>${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}`;
+  const items = page.map((link) => linkTile(link, state.links.indexOf(link))).join('');
+  const addTile = state.editingLinks ? `<button class="card link-card add-link-card" type="button" data-link-add>${icon('plus')}<span>Add link</span></button>` : '';
+  return `<div class="links-grid ${linkView === 'list' ? 'list-view' : ''}">${items}${addTile}</div>${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}`;
 }
 
-function renderLinkTools() {
-  return `
-    <div class="link-manager">
-      <div class="section-head compact">
-        <div>
-          <h2>Links bearbeiten</h2>
-          <p>${state.links.length} Schnellzugriffe</p>
-        </div>
-        <div class="mini-actions">
-          <button class="icon-button tonal-icon" type="button" data-link-add aria-label="Link hinzufuegen">${icon('plus')}</button>
-          <button class="icon-button tonal-icon" type="button" data-link-save aria-label="Links speichern">${icon('save')}</button>
-        </div>
-      </div>
-      <div class="link-editor-list" id="link-list">
-        ${state.links.map((link, index) => linkRow(link, index)).join('')}
-      </div>
-      ${state.links.length ? '<p class="card-text save-hint">Aenderungen werden erst mit Speichern dauerhaft uebernommen.</p>' : ''}
-    </div>
-  `;
+function linkCountLabel() {
+  if (!state.links.length) return 'No links yet';
+  return state.links.length === 1 ? '1 link' : `${state.links.length} links`;
 }
 
 function renderAdmin() {
@@ -255,23 +240,22 @@ function renderAdmin() {
     <section class="settings-hero">
       <div>
         <h2>Settings</h2>
-        <p>Profil, Darstellung, Suche, Standort, Wetter und Anmeldung sauber getrennt.</p>
+        <p>Profile, search, location, weather and account controls.</p>
       </div>
       <div class="actions">
-        <button class="button filled" type="button" data-action="start">Startseite</button>
+        <button class="icon-button tonal-icon" type="button" data-action="start" aria-label="Close settings">${icon('close')}</button>
       </div>
     </section>
     <div class="settings-layout">
-      <nav class="settings-nav" aria-label="Einstellungsbereiche">
-        ${tabButton('settings', 'Allgemein', 'Profil, Suche, Standort')}
-        ${tabButton('appearance', 'Darstellung', 'Theme, Modus, Raster')}
-        ${tabButton('account', 'Anmeldung', 'Profil und Passwort')}
+      <nav class="settings-nav" aria-label="Settings sections">
+        ${tabButton('settings', 'General', 'Profile, search, location')}
+        ${tabButton('account', 'Account', 'Profile and password')}
       </nav>
       <section class="card settings-panel">${adminPanel()}</section>
     </div>
   `, `
     <button class="icon-button" type="button" data-action="info" aria-label="Info">${icon('info')}</button>
-    <button class="avatar-button" type="button" data-action="profile" aria-label="Profil">${escapeHTML(initials(state.user?.displayName || state.user?.username))}</button>
+    <button class="avatar-button" type="button" data-action="profile" aria-label="Profile">${escapeHTML(initials(state.user?.displayName || state.user?.username))}</button>
   `);
   bindGlobalActions();
   bindAdmin();
@@ -282,7 +266,6 @@ function tabButton(id, label, support = '') {
 }
 
 function adminPanel() {
-  if (state.activeAdminTab === 'appearance') return appearancePanel();
   if (state.activeAdminTab === 'account') return accountPanel();
   return settingsPanel();
 }
@@ -290,90 +273,85 @@ function adminPanel() {
 function settingsPanel() {
   const s = state.settings;
   return `
-    <div class="section-head"><div><h2>Allgemein</h2><p>Name, Standort, Wetter und Standardsuche</p></div></div>
+    <div class="section-head"><div><h2>General</h2><p>Name, location, weather and default search</p></div></div>
     <form class="form" id="settings-form">
       <div class="settings-group">
-        <h3>Profil</h3>
-        ${field('Anzeige-Name', 'name', 'text', 'name', true, s.name || '')}
+        <h3>Profile</h3>
+        ${field('Display name', 'name', 'text', 'name', true, s.name || '')}
       </div>
       <div class="settings-group">
-        <h3>Standort</h3>
-        ${field('Standort suchen', 'locationSearch', 'search', 'off', false, '', 'Hamburg, Berlin, Stuhr')}
+        <h3>Location</h3>
+        ${field('Search location', 'locationSearch', 'search', 'off', false, '', 'Hamburg, Berlin, Stuhr')}
         <div id="geocode-results" class="list"></div>
         <div class="form-row">
           ${field('Latitude', 'latitude', 'number', 'off', true, s.location.latitude)}
           ${field('Longitude', 'longitude', 'number', 'off', true, s.location.longitude)}
         </div>
-        ${field('Standortname', 'locationName', 'text', 'off', false, s.location.name || '')}
-        ${field('Zeitzone', 'timezone', 'text', 'off', true, s.location.timezone || 'Europe/Berlin')}
+        ${field('Location name', 'locationName', 'text', 'off', false, s.location.name || '')}
+        ${field('Timezone', 'timezone', 'text', 'off', true, s.location.timezone || 'Europe/Berlin')}
       </div>
       <div class="settings-group">
-        <h3>Wetter und Suche</h3>
+        <h3>Weather and search</h3>
         <div class="form-row">
-          ${selectField('Wetter-Einheit', 'weatherUnit', [['celsius', 'Celsius'], ['fahrenheit', 'Fahrenheit']], s.weather.unit)}
-          ${field('Refresh-Minuten', 'weatherRefresh', 'number', 'off', true, s.weather.refreshMinutes)}
+          ${selectField('Weather unit', 'weatherUnit', [['celsius', 'Celsius'], ['fahrenheit', 'Fahrenheit']], s.weather.unit)}
+          ${field('Refresh minutes', 'weatherRefresh', 'number', 'off', true, s.weather.refreshMinutes)}
         </div>
-        <label class="list-row toggle-row"><span></span><span><strong>Wetter anzeigen</strong><span class="support">Open-Meteo ohne API-Key</span></span><input type="checkbox" name="weatherEnabled" ${s.weather.enabled ? 'checked' : ''}></label>
-        ${selectField('Suchmaschine', 'searchEngine', Object.entries(state.searchEngines).map(([key, value]) => [key, value.name]), s.display.searchEngine)}
+        <label class="list-row toggle-row"><span></span><span><strong>Show weather</strong><span class="support">Open-Meteo without an API key</span></span><input type="checkbox" name="weatherEnabled" ${s.weather.enabled ? 'checked' : ''}></label>
+        ${selectField('Search engine', 'searchEngine', Object.entries(state.searchEngines).map(([key, value]) => [key, value.name]), s.display.searchEngine)}
       </div>
-      <div class="actions"><button class="button filled" type="submit">Speichern</button></div>
+      <div class="actions"><button class="button filled" type="submit">Save</button></div>
     </form>
   `;
 }
 
-function appearancePanel() {
-  const s = state.settings;
+function renderEditToolbar(display) {
   return `
-    <div class="section-head"><div><h2>Darstellung</h2><p>Optik und Schnellzugriff-Raster</p></div></div>
-    <form class="form" id="appearance-form">
-      <div class="settings-group">
-        <h3>Theme</h3>
-        <div class="theme-grid">
-          ${state.themes.map((theme) => `<button class="theme-choice ${theme === getStoredTheme() ? 'selected' : ''}" type="button" data-theme="${theme}"><span class="theme-swatch theme-${theme}"></span><strong>${THEME_LABELS[theme] || theme}</strong></button>`).join('')}
-        </div>
+    <div class="edit-toolbar">
+      <div class="segmented compact-segmented" aria-label="Link view">
+        <button type="button" data-link-view="grid" aria-selected="${(display.linkView || 'grid') !== 'list'}">Icons</button>
+        <button type="button" data-link-view="list" aria-selected="${display.linkView === 'list'}">List</button>
       </div>
-      <div class="settings-group">
-        <h3>Modus</h3>
-        <div class="segmented">${state.modes.map((mode) => `<button type="button" data-mode="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>
-      </div>
-      <div class="settings-group">
-        <h3>Startseite</h3>
-        ${selectField('Links pro Seite', 'linksPerPage', [['4','4'],['6','6'],['8','8'],['9','9'],['12','12']], String(s.display.linksPerPage || 6))}
-      </div>
-      <div class="actions"><button class="button filled" type="submit">Darstellung speichern</button></div>
-    </form>
+      ${selectField('Per page', 'linksPerPageToolbar', [['4','4'],['6','6'],['8','8'],['9','9'],['12','12']], String(display.linksPerPage || 6))}
+      <button class="icon-button tonal-icon" type="button" data-link-save aria-label="Save links">${icon('save')}</button>
+    </div>
   `;
 }
 
-function linkRow(link, index) {
+function linkTile(link, index) {
   if (state.editingLink === index) {
     return `
-      <article class="link-editor-row editing" data-editor="${index}">
+      <article class="card link-card link-card-editor" data-editor="${index}">
         <div class="form">
-          ${field('Titel', 'title', 'text', 'off', true, link.title || '')}
+          ${field('Title', 'title', 'text', 'off', true, link.title || '')}
           ${field('URL', 'url', 'url', 'off', true, link.url || '')}
           <div class="favicon-line">
-            ${field('Icon oder Bildpfad', 'icon', 'text', 'off', false, link.icon || '')}
-            <button class="button tonal" type="button" data-fetch-icon="${index}">Automatisch</button>
+            ${field('Icon or image path', 'icon', 'text', 'off', false, link.icon || '')}
+            <button class="button tonal" type="button" data-fetch-icon="${index}">Auto</button>
           </div>
-          <div class="color-grid">${Array.from({ length: 10 }, (_, color) => `<button class="color-dot c${color} ${safeColor(link.color) === color ? 'selected' : ''}" type="button" data-color="${color}" aria-label="Akzent ${color + 1}"></button>`).join('')}</div>
+          <div class="color-grid">${Array.from({ length: 10 }, (_, color) => `<button class="color-dot c${color} ${safeColor(link.color) === color ? 'selected' : ''}" type="button" data-color="${color}" aria-label="Accent ${color + 1}"></button>`).join('')}</div>
           <div class="actions">
-            <button class="button filled" type="button" data-link-apply="${index}">Uebernehmen</button>
-            <button class="button text" type="button" data-link-cancel>Abbrechen</button>
+            <button class="button filled" type="button" data-link-apply="${index}">Apply</button>
+            <button class="button text" type="button" data-link-cancel>Cancel</button>
           </div>
         </div>
       </article>
     `;
   }
+  const content = `
+    <span class="link-icon c${safeColor(link.color)}">${iconOrText(link.icon, link.title)}</span>
+    <span><span class="link-title">${escapeHTML(link.title)}</span><span class="link-domain">${escapeHTML(domain(link.url))}</span></span>
+  `;
+  if (!state.editingLinks) {
+    return `<a class="card link-card" href="${escapeAttr(link.url)}" rel="noopener noreferrer">${content}</a>`;
+  }
   return `
-    <article class="link-editor-row">
-      <span class="link-icon c${safeColor(link.color)}">${iconOrText(link.icon, link.title)}</span>
-      <span><span class="link-title">${escapeHTML(link.title)}</span><span class="link-domain">${escapeHTML(link.url)}</span></span>
-      <span class="mini-actions">
-        <button class="icon-button" type="button" data-link-up="${index}" aria-label="Nach oben">${icon('up')}</button>
-        <button class="icon-button" type="button" data-link-down="${index}" aria-label="Nach unten">${icon('down')}</button>
-        <button class="icon-button" type="button" data-link-edit="${index}" aria-label="Bearbeiten">${icon('edit')}</button>
-        <button class="icon-button" type="button" data-link-delete="${index}" aria-label="Loeschen">${icon('close')}</button>
+    <article class="card link-card editable-link">
+      ${content}
+      <span class="tile-actions">
+        <button class="icon-button tonal-icon" type="button" data-link-up="${index}" aria-label="Move up">${icon('up')}</button>
+        <button class="icon-button tonal-icon" type="button" data-link-down="${index}" aria-label="Move down">${icon('down')}</button>
+        <button class="icon-button tonal-icon" type="button" data-link-edit="${index}" aria-label="Edit link">${icon('edit')}</button>
+        <button class="icon-button tonal-icon" type="button" data-link-delete="${index}" aria-label="Delete link">${icon('close')}</button>
       </span>
     </article>
   `;
@@ -381,18 +359,18 @@ function linkRow(link, index) {
 
 function accountPanel() {
   return `
-    <div class="section-head"><div><h2>Anmeldung</h2><p>Profil und Passwort</p></div></div>
+    <div class="section-head"><div><h2>Account</h2><p>Profile and password</p></div></div>
     <form class="form" id="account-form">
-      ${field('Aktuelles Passwort', 'currentPassword', 'password', 'current-password')}
-      ${field('Anzeigename', 'displayName', 'text', 'name', true, state.user.displayName || '')}
-      ${field('E-Mail optional', 'email', 'email', 'email', false, state.user.email || '')}
-      ${field('Benutzername', 'username', 'text', 'username', true, state.user.username || '')}
+      ${field('Current password', 'currentPassword', 'password', 'current-password')}
+      ${field('Display name', 'displayName', 'text', 'name', true, state.user.displayName || '')}
+      ${field('Email optional', 'email', 'email', 'email', false, state.user.email || '')}
+      ${field('Username', 'username', 'text', 'username', true, state.user.username || '')}
       <div class="form-row">
-        ${field('Neues Passwort', 'password', 'password', 'new-password', false)}
-        ${field('Passwort wiederholen', 'passwordConfirm', 'password', 'new-password', false)}
+        ${field('New password', 'password', 'password', 'new-password', false)}
+        ${field('Repeat password', 'passwordConfirm', 'password', 'new-password', false)}
       </div>
-      <div class="tonal-card card-text">Lass die Passwortfelder leer, wenn du nur Profil oder Benutzername aendern willst.</div>
-      <div class="actions"><button class="button filled" type="submit">Anmeldedaten speichern</button></div>
+      <div class="tonal-card card-text">Leave the password fields empty if you only want to update profile details.</div>
+      <div class="actions"><button class="button filled" type="submit">Save account</button></div>
     </form>
   `;
 }
@@ -403,10 +381,8 @@ function bindAdmin() {
     renderAdmin();
   }));
   $('#settings-form')?.addEventListener('submit', saveSettings);
-  $('#appearance-form')?.addEventListener('submit', saveAppearance);
   $('#account-form')?.addEventListener('submit', saveAccount);
   $('[name="locationSearch"]')?.addEventListener('input', debounce(geocode, 350));
-  bindAppearanceControls(() => renderAdmin());
 }
 
 function bindLinkEditor() {
@@ -417,6 +393,8 @@ function bindLinkEditor() {
     renderStart();
   });
   $('[data-link-save]')?.addEventListener('click', saveLinks);
+  $('[name="linksPerPageToolbar"]')?.addEventListener('change', saveDisplayFromToolbar);
+  $$('[data-link-view]').forEach((el) => el.addEventListener('click', saveDisplayFromToolbar));
   $$('[data-link-edit]').forEach((el) => el.addEventListener('click', () => { state.editingLink = Number(el.dataset.linkEdit); state.editingLinks = true; renderStart(); }));
   $$('[data-link-delete]').forEach((el) => el.addEventListener('click', () => { state.links.splice(Number(el.dataset.linkDelete), 1); state.editingLink = -1; renderStart(); }));
   $$('[data-link-up]').forEach((el) => el.addEventListener('click', () => {
@@ -456,6 +434,7 @@ async function saveSettings(event) {
     },
     display: {
       linksPerPage: state.settings.display.linksPerPage,
+      linkView: state.settings.display.linkView || 'grid',
       searchEngine: form.get('searchEngine'),
       theme: getStoredTheme(),
       mode: getStoredMode()
@@ -463,16 +442,18 @@ async function saveSettings(event) {
   };
   const result = await api('/api/admin/settings', { method: 'PUT', body: settings });
   state.settings = result.settings;
-  toast('Einstellungen gespeichert.');
+  toast('Settings saved.');
 }
 
-async function saveAppearance(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
+async function saveDisplayFromToolbar(event) {
+  if (event?.preventDefault) event.preventDefault();
+  const selectedView = event?.currentTarget?.dataset?.linkView || state.settings.display.linkView || 'grid';
+  const perPage = $('[name="linksPerPageToolbar"]')?.value || state.settings.display.linksPerPage || 6;
   const settings = {
     ...state.settings,
     display: {
-      linksPerPage: form.get('linksPerPage'),
+      linksPerPage: perPage,
+      linkView: selectedView,
       searchEngine: state.settings.display.searchEngine,
       theme: getStoredTheme(),
       mode: getStoredMode()
@@ -480,15 +461,15 @@ async function saveAppearance(event) {
   };
   const result = await api('/api/admin/settings', { method: 'PUT', body: settings });
   state.settings = result.settings;
-  toast('Darstellung gespeichert.');
-  renderAdmin();
+  toast('Display saved.');
+  renderStart();
 }
 
 async function saveLinks() {
   const result = await api('/api/admin/links', { method: 'PUT', body: { links: state.links } });
   state.links = result.links;
   state.editingLink = -1;
-  toast('Links gespeichert.');
+  toast('Links saved.');
   renderStart();
 }
 
@@ -499,8 +480,8 @@ async function applyLinkEditor() {
     url: $('[name="url"]', editor).value,
     icon: $('[name="icon"]', editor).value
   };
-  if (!data.title?.trim()) return toast('Titel fehlt.', 'error');
-  if (!data.url?.trim()) return toast('URL fehlt.', 'error');
+  if (!data.title?.trim()) return toast('Title is required.', 'error');
+  if (!data.url?.trim()) return toast('URL is required.', 'error');
   const selected = $('.color-dot.selected', editor);
   let iconValue = data.icon.trim();
   let colorValue = selected ? Number(selected.dataset.color) : 0;
@@ -526,11 +507,11 @@ async function applyLinkEditor() {
 async function fetchIconForEditor() {
   const editor = $('[data-editor]');
   const url = $('[name="url"]', editor).value;
-  if (!url.trim()) return toast('URL fehlt.', 'error');
+  if (!url.trim()) return toast('URL is required.', 'error');
   const result = await fetchFavicon(url);
   if (result.icon) $('[name="icon"]', editor).value = result.icon;
   $$('.color-dot', editor).forEach((dot) => dot.classList.toggle('selected', Number(dot.dataset.color) === result.color));
-  toast(result.icon ? 'Favicon geladen.' : 'Kein Favicon gefunden.');
+  toast(result.icon ? 'Favicon loaded.' : 'No favicon found.');
 }
 
 function fetchFavicon(url) {
@@ -540,10 +521,10 @@ function fetchFavicon(url) {
 async function saveAccount(event) {
   event.preventDefault();
   const body = Object.fromEntries(new FormData(event.currentTarget).entries());
-  if (!body.currentPassword) return toast('Aktuelles Passwort erforderlich.', 'error');
-  if (body.password !== body.passwordConfirm) return toast('Neue Passwoerter stimmen nicht ueberein.', 'error');
+  if (!body.currentPassword) return toast('Current password is required.', 'error');
+  if (body.password !== body.passwordConfirm) return toast('New passwords do not match.', 'error');
   await api('/api/admin/credentials', { method: 'PUT', body });
-  toast('Anmeldedaten gespeichert.');
+  toast('Account saved.');
   await loadAppData();
   renderAdmin();
 }
@@ -591,37 +572,77 @@ function bindGlobalActions() {
 function bindAppearanceControls(rerender) {
   $$('[data-theme]').forEach((button) => button.addEventListener('click', () => {
     applyTheme(button.dataset.theme, getStoredMode());
-    rerender();
+    saveAppearanceSettings().then(rerender);
   }));
   $$('[data-mode]').forEach((button) => button.addEventListener('click', () => {
     applyTheme(getStoredTheme(), button.dataset.mode);
-    rerender();
+    saveAppearanceSettings().then(rerender);
   }));
+}
+
+async function saveAppearanceSettings() {
+  const settings = {
+    ...state.settings,
+    display: {
+      linksPerPage: state.settings.display.linksPerPage,
+      linkView: state.settings.display.linkView || 'grid',
+      searchEngine: state.settings.display.searchEngine,
+      theme: getStoredTheme(),
+      mode: getStoredMode()
+    }
+  };
+  const result = await api('/api/admin/settings', { method: 'PUT', body: settings });
+  state.settings = result.settings;
+  toast('Appearance saved.');
 }
 
 function openProfileSheet() {
   openSheet(`
-    ${sheetHeader('Profil')}
+    ${sheetHeader('Profile')}
     <div class="account-card"><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div></div>
     <div class="list">
-      <button class="list-row" data-sheet-admin>${icon('settings')}<span><strong>Einstellungen</strong><span class="support">Nestiku verwalten</span></span><span></span></button>
-      <button class="list-row" data-sheet-links>${icon('edit')}<span><strong>Links bearbeiten</strong><span class="support">Direkt auf der Startseite</span></span><span></span></button>
-      <button class="list-row" data-logout>${icon('logout')}<span><strong>Logout</strong><span class="support">Session beenden</span></span><span></span></button>
+      <button class="list-row" data-sheet-admin>${icon('settings')}<span><strong>Settings</strong><span class="support">Manage profile, search and account</span></span><span></span></button>
+      <button class="list-row" data-sheet-appearance>${icon('palette')}<span><strong>Appearance</strong><span class="support">Theme and color mode</span></span><span></span></button>
+      <button class="list-row" data-sheet-about>${icon('info')}<span><strong>About</strong><span class="support">Version, paths and health endpoints</span></span><span></span></button>
+      <button class="list-row" data-logout>${icon('logout')}<span><strong>Log out</strong><span class="support">End this session</span></span><span></span></button>
     </div>
   `);
   bindSheetChrome();
   $('[data-sheet-admin]').addEventListener('click', () => { closeSheet(); renderAdmin(); });
-  $('[data-sheet-links]').addEventListener('click', () => { closeSheet(); state.editingLinks = true; renderStart(); });
+  $('[data-sheet-appearance]').addEventListener('click', openAppearanceSheet);
+  $('[data-sheet-about]').addEventListener('click', openAboutSheet);
   $('[data-logout]').addEventListener('click', logout);
 }
 
 function openInfoSheet() {
+  openAboutSheet();
+}
+
+function openAboutSheet() {
   openSheet(`
-    ${sheetHeader('Info')}
+    ${sheetHeader('About Nestiku')}
     <div class="empty"><div class="logo-large"><img src="/assets/nestiku.png" alt=""></div><div><h3 class="card-title">Nestiku</h3><p class="card-text">Personal Startpage</p></div></div>
-    <div class="technical-card">Port intern: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data: /data</div>
+    <div class="technical-card">Internal port: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data path: /data<br>Image: ghcr.io/maroishiku/nestiku</div>
   `);
   bindSheetChrome();
+}
+
+function openAppearanceSheet() {
+  openSheet(`
+    ${sheetHeader('Appearance')}
+    <div class="settings-group">
+      <h3>Theme</h3>
+      <div class="theme-grid">
+        ${state.themes.map((theme) => `<button class="theme-choice ${theme === getStoredTheme() ? 'selected' : ''}" type="button" data-theme="${theme}"><span class="theme-swatch theme-${theme}"></span><strong>${THEME_LABELS[theme] || theme}</strong></button>`).join('')}
+      </div>
+    </div>
+    <div class="settings-group">
+      <h3>Mode</h3>
+      <div class="segmented">${state.modes.map((mode) => `<button type="button" data-mode="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>
+    </div>
+  `);
+  bindSheetChrome();
+  bindAppearanceControls(openAppearanceSheet);
 }
 
 function bindSheetChrome({ onBack = null } = {}) {
@@ -698,15 +719,15 @@ function updateClock() {
   const now = nowInTimezone(state.settings?.location?.timezone);
   $('#time').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const hour = now.getHours();
-  let greeting = 'Hallo';
-  if (hour < 5) greeting = 'Gute Nacht';
-  else if (hour < 11) greeting = 'Guten Morgen';
-  else if (hour < 18) greeting = 'Guten Tag';
-  else if (hour < 22) greeting = 'Guten Abend';
-  else greeting = 'Gute Nacht';
+  let greeting = 'Hello';
+  if (hour < 5) greeting = 'Good night';
+  else if (hour < 11) greeting = 'Good morning';
+  else if (hour < 18) greeting = 'Good afternoon';
+  else if (hour < 22) greeting = 'Good evening';
+  else greeting = 'Good night';
   $('#greeting').textContent = state.settings?.name ? `${greeting}, ${state.settings.name}` : greeting;
-  const unit = state.settings?.weather?.unit === 'fahrenheit' ? '°F' : '°C';
-  const weather = state.weather === null ? '' : ` · ${state.weather}${unit}`;
+  const unit = state.settings?.weather?.unit === 'fahrenheit' ? '\u00b0F' : '\u00b0C';
+  const weather = state.weather === null ? '' : ` \u00b7 ${state.weather}${unit}`;
   $('#date').textContent = `${WEEKDAYS[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}${weather}`;
 }
 

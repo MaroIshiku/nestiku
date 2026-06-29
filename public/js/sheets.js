@@ -6,13 +6,13 @@ let globalHandlersBound = false;
 
 export function sheetHeader(title, { back = false } = {}) {
   const backButton = back
-    ? `<button class="button text sheet-back" type="button" data-back data-sheet-action="back">${icon('back')}<span>Zurueck</span></button>`
+    ? `<button class="button text sheet-back" type="button" data-back data-sheet-action="back">${icon('back')}<span>Back</span></button>`
     : '<span></span>';
   return `
     <div class="sheet-head">
       ${backButton}
       <h2>${title}</h2>
-      <button class="icon-button" type="button" data-close data-sheet-action="close" aria-label="Schliessen">${icon('close')}</button>
+      <a class="icon-button" href="/?v=20260630f" aria-label="Close">${icon('close')}</a>
     </div>
   `;
 }
@@ -26,6 +26,7 @@ export function openSheet(html, { onBack = null } = {}) {
   node.innerHTML = `<section class="sheet" role="dialog" aria-modal="true">${html}</section>`;
   document.body.append(node);
   node.addEventListener('click', handleSheetClick);
+  node.addEventListener('pointerdown', handleSheetCommand, true);
   document.addEventListener('keydown', escapeToClose);
   $('[data-close]', node)?.focus();
 }
@@ -33,6 +34,7 @@ export function openSheet(html, { onBack = null } = {}) {
 export function closeSheet() {
   $$('.sheet-backdrop').forEach((node) => {
     node.removeEventListener('click', handleSheetClick);
+    node.removeEventListener('pointerdown', handleSheetCommand, true);
     node.remove();
   });
   currentBackHandler = null;
@@ -42,6 +44,20 @@ export function closeSheet() {
 function handleSheetClick(event) {
   if (event.target === event.currentTarget) {
     closeSheet();
+  }
+}
+
+function handleSheetCommand(event) {
+  if (event.target.closest('[data-sheet-action="close"]')) {
+    event.preventDefault();
+    closeSheet();
+    return;
+  }
+  if (event.target.closest('[data-sheet-action="back"]')) {
+    event.preventDefault();
+    const back = currentBackHandler;
+    closeSheet();
+    if (back) back();
   }
 }
 

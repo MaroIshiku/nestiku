@@ -23,7 +23,7 @@ const APP = {
   id: 'nestiku',
   name: 'Nestiku',
   subtitle: 'Personal Startpage',
-  description: 'Private Startseite mit Suche, Wetter, Links und Adminbereich.'
+  description: 'Private startpage with search, weather, bookmarks and settings.'
 };
 
 const SEARCH_ENGINES = {
@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS = {
     timezone: 'Europe/Berlin'
   },
   weather: { enabled: true, unit: 'celsius', refreshMinutes: 30 },
-  display: { linksPerPage: 6, searchEngine: 'duckduckgo', theme: 'lavender', mode: 'system' }
+  display: { linksPerPage: 6, linkView: 'grid', searchEngine: 'duckduckgo', theme: 'lavender', mode: 'system' }
 };
 
 const DEFAULT_LINKS = { links: [] };
@@ -87,7 +87,14 @@ app.get('/readyz', async (req, res) => {
 
 app.use('/assets', express.static(path.join(PUBLIC_DIR, 'assets'), { maxAge: IS_PROD ? '1d' : 0 }));
 app.use('/user-icons', requireAuth, express.static(ICON_DIR, { maxAge: '30d', etag: true }));
-app.use(express.static(PUBLIC_DIR, { extensions: ['html'], maxAge: IS_PROD ? '1h' : 0 }));
+app.use(express.static(PUBLIC_DIR, {
+  extensions: ['html'],
+  maxAge: IS_PROD ? '1h' : 0,
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+    if (/\.(js|css)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 
 app.get('/api/bootstrap', async (req, res) => {
   const [auth, settings] = await Promise.all([ensureAuthState(), settingsStore.read()]);
@@ -108,7 +115,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.post('/api/setup/register', async (req, res) => {
   try {
     const auth = await ensureAuthState();
-    if (!isSetupRequired(auth)) return res.status(409).json({ error: 'Setup ist bereits abgeschlossen.' });
+    if (!isSetupRequired(auth)) return res.status(409).json({ error: 'Setup is already complete.' });
 
     const setupSecret = await readSetupSecret();
     if (!setupSecret.configured) return res.status(503).json({ error: setupSecret.error });
@@ -116,7 +123,7 @@ app.post('/api/setup/register', async (req, res) => {
     const body = req.body || {};
     if (!timingSafeEqualString(body.setupSecret, setupSecret.value)) {
       await delay(350);
-      return res.status(401).json({ error: 'Setup-Secret ist falsch.' });
+      return res.status(401).json({ error: 'Setup secret is incorrect.' });
     }
 
     const username = clean(body.username, 64);
@@ -125,8 +132,8 @@ app.post('/api/setup/register', async (req, res) => {
     const password = String(body.password || '');
     const passwordConfirm = String(body.passwordConfirm || '');
 
-    if (!username) throw new Error('Admin-Benutzername fehlt.');
-    if (!displayName) throw new Error('Anzeigename fehlt.');
+    if (!username) throw new Error('Admin username is required.');
+    if (!displayName) throw new Error('Display name is required.');
     validatePassword({ password, passwordConfirm, username, setupSecret: setupSecret.value });
 
     const nextAuth = {
@@ -150,7 +157,7 @@ app.post('/api/setup/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   const auth = await ensureAuthState();
-  if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup erforderlich.' });
+  if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup required.' });
   const { username, password } = req.body || {};
   if (typeof username !== 'string' || typeof password !== 'string') {
     await delay(350);
@@ -214,7 +221,7 @@ app.put('/api/admin/credentials', requireAuth, async (req, res) => {
     const body = req.body || {};
     if (!await verifyPassword(String(body.currentPassword || ''), auth.passwordHash)) {
       await delay(350);
-      return res.status(401).json({ error: 'Aktuelles Passwort ist falsch.' });
+      return res.status(401).json({ error: 'Current password is incorrect.' });
     }
     let changed = false;
     const username = clean(body.username, 64);
@@ -254,7 +261,7 @@ app.put('/api/admin/credentials', requireAuth, async (req, res) => {
 
 app.get('/api/admin/geocode', requireAuth, async (req, res) => {
   const q = clean(req.query.q, 80);
-  if (!q) return res.status(400).json({ error: 'Suchbegriff fehlt.' });
+  if (!q) return res.status(400).json({ error: 'Search term is required.' });
   try {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=de&format=json`;
     const response = await fetchWithTimeout(url, { headers: { 'User-Agent': 'nestiku/2.0' } });
@@ -287,7 +294,8 @@ app.get('/api/admin/favicon', requireAuth, async (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Endpoint nicht gefunden.' });
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Endpoint not found.' });
+  res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
@@ -325,10 +333,10 @@ async function ensureSessionSecret() {
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
     const existing = (await fs.readFile(filePath, 'utf8')).trim();
-    if (existing.length < 32) throw new Error('Persistentes Session-Secret ist ungueltig.');
+    if (existing.length < 32) throw new Error('Persistent session secret is invalid.');
     setSessionSecret(existing);
   }
-  if (IS_PROD) console.warn('SESSION_SECRET fehlt; Nestiku nutzt ein automatisch erzeugtes persistentes Secret aus /data/session_secret.');
+  if (IS_PROD) console.warn('SESSION_SECRET is missing; Nestiku is using an automatically generated persistent secret from /data/session_secret.');
 }
 
 function securityHeaders(req, res, next) {
@@ -381,14 +389,14 @@ async function readSetupSecret() {
   try {
     const value = (await fs.readFile(filePath, 'utf8')).trim();
     if (value) return { configured: true, value };
-    return { configured: false, error: 'Setup-Secret-Datei ist leer.' };
+    return { configured: false, error: 'Setup secret file is empty.' };
   } catch (error) {
-    if (explicitFile) return { configured: false, error: 'Setup-Secret-Datei ist nicht lesbar.' };
-    if (error.code !== 'ENOENT') return { configured: false, error: 'Setup-Secret-Datei ist nicht lesbar.' };
+    if (explicitFile) return { configured: false, error: 'Setup secret file is not readable.' };
+    if (error.code !== 'ENOENT') return { configured: false, error: 'Setup secret file is not readable.' };
   }
   const envSecret = clean(process.env.ISHIKU_SETUP_SECRET, 500);
   if (envSecret) return { configured: true, value: envSecret };
-  return { configured: false, error: 'ISHIKU_SETUP_SECRET_FILE oder ISHIKU_SETUP_SECRET fehlt.' };
+  return { configured: false, error: 'ISHIKU_SETUP_SECRET_FILE or ISHIKU_SETUP_SECRET is missing.' };
 }
 
 function getSession(req) {
@@ -398,10 +406,10 @@ function getSession(req) {
 async function requireAuth(req, res, next) {
   try {
     const auth = await ensureAuthState();
-    if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup erforderlich.' });
+    if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup required.' });
     const session = getSession(req);
     if (session && session.user === auth.username) return next();
-    return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
+    return res.status(401).json({ error: 'Authentication required.' });
   } catch (error) {
     return next(error);
   }
@@ -428,14 +436,14 @@ function publicUser(auth, settings) {
 }
 
 function validatePassword({ password, passwordConfirm, username, setupSecret }) {
-  if (password.length < 12) throw new Error('Passwort muss mindestens 12 Zeichen lang sein.');
-  if (password.length > 200) throw new Error('Passwort ist zu lang.');
-  if (password !== passwordConfirm) throw new Error('Passwort und Wiederholung stimmen nicht ueberein.');
+  if (password.length < 12) throw new Error('Password must be at least 12 characters long.');
+  if (password.length > 200) throw new Error('Password is too long.');
+  if (password !== passwordConfirm) throw new Error('Password and confirmation do not match.');
   const normalized = password.trim().toLowerCase();
-  if (setupSecret && password === setupSecret) throw new Error('Passwort darf nicht mit dem Setup-Secret uebereinstimmen.');
-  if (PLACEHOLDER_PASSWORDS.has(normalized)) throw new Error('Bitte kein Platzhalter-Passwort verwenden.');
+  if (setupSecret && password === setupSecret) throw new Error('Password must not match the setup secret.');
+  if (PLACEHOLDER_PASSWORDS.has(normalized)) throw new Error('Please do not use a placeholder password.');
   if ([username, APP.id, APP.name].some((value) => normalized === String(value || '').toLowerCase())) {
-    throw new Error('Passwort darf nicht Benutzername, App-ID oder App-Name sein.');
+    throw new Error('Password must not match the username, app id or app name.');
   }
 }
 
@@ -459,6 +467,7 @@ function validateSettings(input) {
   if (input.display && typeof input.display === 'object') {
     const perPage = parseInt(input.display.linksPerPage, 10);
     if ([4, 6, 8, 9, 12].includes(perPage)) out.display.linksPerPage = perPage;
+    if (['grid', 'list'].includes(input.display.linkView)) out.display.linkView = input.display.linkView;
     if (SEARCH_ENGINES[input.display.searchEngine]) out.display.searchEngine = input.display.searchEngine;
     if (THEMES.includes(input.display.theme)) out.display.theme = input.display.theme;
     if (MODES.includes(input.display.mode)) out.display.mode = input.display.mode;
@@ -467,13 +476,13 @@ function validateSettings(input) {
 }
 
 function validateLinks(input) {
-  if (!Array.isArray(input)) throw new Error('Links muss ein Array sein.');
-  if (input.length > 200) throw new Error('Maximal 200 Links erlaubt.');
+  if (!Array.isArray(input)) throw new Error('Links must be an array.');
+  if (input.length > 200) throw new Error('A maximum of 200 links is allowed.');
   return input.map((item, index) => {
-    if (!item || typeof item !== 'object') throw new Error(`Link ${index + 1}: ungueltig.`);
+    if (!item || typeof item !== 'object') throw new Error(`Link ${index + 1}: invalid item.`);
     const title = clean(item.title, 100);
     const url = parseHttpUrl(item.url, `Link ${index + 1}: URL`).toString();
-    if (!title) throw new Error(`Link ${index + 1}: Titel fehlt.`);
+    if (!title) throw new Error(`Link ${index + 1}: title is required.`);
     const color = Number.isInteger(item.color) && item.color >= 0 && item.color <= 9 ? item.color : domainColorIndex(url);
     const icon = clean(item.icon, 260) || initials(title);
     return { title, url, icon, color };
@@ -486,15 +495,15 @@ function clean(value, max = 100) {
 
 function parseHttpUrl(raw, label = 'URL') {
   let value = clean(raw, 2048);
-  if (!value) throw new Error(`${label} fehlt.`);
+  if (!value) throw new Error(`${label} is required.`);
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value) && /^[^\s.]+\.[^\s]+/.test(value)) value = `https://${value}`;
   let url;
   try {
     url = new URL(value);
   } catch {
-    throw new Error(`${label} ist ungueltig.`);
+    throw new Error(`${label} is invalid.`);
   }
-  if (!['http:', 'https:'].includes(url.protocol)) throw new Error(`${label} muss http oder https sein.`);
+  if (!['http:', 'https:'].includes(url.protocol)) throw new Error(`${label} must use http or https.`);
   return url;
 }
 
@@ -537,7 +546,8 @@ async function cacheFavicon(rawUrl) {
   const host = pageUrl.hostname.replace(/^www\./, '').toLowerCase();
   const base = crypto.createHash('sha256').update(host).digest('hex').slice(0, 24);
   const candidates = await faviconCandidates(pageUrl);
-  for (const candidate of candidates) {
+  for (let index = 0; index < candidates.length; index += 1) {
+    const candidate = candidates[index];
     try {
       const response = await fetchPublicWithTimeout(candidate, {
         headers: {
@@ -552,7 +562,7 @@ async function cacheFavicon(rawUrl) {
       const buffer = Buffer.from(await response.arrayBuffer());
       if (buffer.length > ICON_MAX_BYTES) continue;
       await fs.mkdir(ICON_DIR, { recursive: true });
-      const file = `${base}.${ext}`;
+      const file = `${base}-${index}.${ext}`;
       await fs.writeFile(path.join(ICON_DIR, file), buffer);
       return { icon: `/user-icons/${file}`, color: domainColorIndex(pageUrl.toString()), domain: host };
     } catch {}
@@ -575,6 +585,7 @@ async function faviconCandidates(pageUrl) {
     } catch {}
   };
 
+  let manifestUrls = [];
   try {
     const response = await fetchPublicWithTimeout(pageUrl, {
       headers: { Accept: 'text/html,*/*;q=0.2', 'User-Agent': 'nestiku/2.0' }
@@ -587,16 +598,31 @@ async function faviconCandidates(pageUrl) {
         const rel = attrValue(tag, 'rel').toLowerCase();
         const href = attrValue(tag, 'href');
         if (href && /\b(apple-touch-icon|icon|shortcut icon|mask-icon)\b/.test(rel)) add(href);
+        if (href && /\bmanifest\b/.test(rel)) manifestUrls.push(new URL(href, pageUrl));
       }
     }
   } catch {}
+
+  for (const manifestUrl of manifestUrls.slice(0, 3)) {
+    try {
+      const response = await fetchPublicWithTimeout(manifestUrl, {
+        headers: { Accept: 'application/manifest+json,application/json,*/*;q=0.2', 'User-Agent': 'nestiku/2.0' }
+      });
+      if (!response.ok) continue;
+      const manifest = JSON.parse(Buffer.from(await response.arrayBuffer()).slice(0, 128 * 1024).toString('utf8'));
+      for (const item of (Array.isArray(manifest.icons) ? manifest.icons : [])) {
+        if (item && item.src) add(new URL(item.src, manifestUrl).toString());
+      }
+    } catch {}
+  }
 
   add('/apple-touch-icon.png');
   add('/apple-touch-icon-precomposed.png');
   add('/favicon.svg');
   add('/favicon.png');
   add('/favicon.ico');
-  return candidates.slice(0, 12);
+  add(`https://icons.duckduckgo.com/ip3/${pageUrl.hostname}.ico`);
+  return candidates.slice(0, 20);
 }
 
 function attrValue(tag, name) {
@@ -607,10 +633,10 @@ function attrValue(tag, name) {
 
 async function assertPublicHostname(hostname) {
   const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  if (!normalized || normalized === 'localhost' || normalized.endsWith('.localhost')) throw new Error('Lokale Adressen sind fuer Favicons nicht erlaubt.');
+  if (!normalized || normalized === 'localhost' || normalized.endsWith('.localhost')) throw new Error('Local addresses are not allowed for favicons.');
   const addresses = net.isIP(normalized) ? [{ address: normalized }] : await dns.lookup(normalized, { all: true, verbatim: false });
-  if (!addresses.length) throw new Error('Host konnte nicht aufgeloest werden.');
-  if (addresses.some((item) => isPrivateAddress(item.address))) throw new Error('Private oder lokale Adressen sind fuer Favicons nicht erlaubt.');
+  if (!addresses.length) throw new Error('Host could not be resolved.');
+  if (addresses.some((item) => isPrivateAddress(item.address))) throw new Error('Private or local addresses are not allowed for favicons.');
 }
 
 function isPrivateAddress(address) {

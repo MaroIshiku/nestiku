@@ -27,4 +27,4 @@ export const THEME_LABELS = {
 };
 
 export const MODE_LABELS = { system: 'System', light: 'Light', dark: 'Dark' };
-export const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
