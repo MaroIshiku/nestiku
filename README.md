@@ -38,6 +38,7 @@ Intern lauscht Nestiku auf Port `8080`. Docker Compose published bewusst `8503:8
 
 Die Compose-Datei ist auf Self-Hosting und Appliance-Setups ausgelegt:
 
+- Image `ghcr.io/maroishiku/nestiku:latest`; wird per GitHub Actions aus `main` gebaut
 - eigenes Compose-Projekt `nestiku-startpage`
 - Service, Container, Hostname und Netzwerk `Nestiku`
 - long-syntax Port-Mapping `8503 -> 8080`
@@ -51,6 +52,10 @@ Die Compose-Datei ist auf Self-Hosting und Appliance-Setups ausgelegt:
 - `pull_policy: always`
 - JSON-Logrotation
 - OCI-Labels und CasaOS/ZimaOS-Metadaten
+
+Falls ein Installer das Image nicht pullen kann, pruefe in GitHub Packages, ob
+`ghcr.io/maroishiku/nestiku` oeffentlich sichtbar ist. Der Workflow unter
+`.github/workflows/publish-image.yml` baut und pushed `latest` automatisch.
 
 ## Erstes Setup
 
