@@ -18,14 +18,12 @@ Nestiku ist eine kleine, sichere Startseiten-App mit Suche, Wetter, Schnellzugri
 
 ```bash
 cp .env.example .env
-mkdir -p secrets data
-openssl rand -base64 48 > secrets/setup_secret.txt
 ```
 
-Setze in `.env` ein eigenes `SESSION_SECRET`, dann:
+Setze in `.env` eigene Werte fuer `SESSION_SECRET` und `ISHIKU_SETUP_SECRET`, dann:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 Die App ist danach erreichbar unter:
@@ -40,15 +38,17 @@ Intern lauscht Nestiku auf Port `8080`. Docker Compose published bewusst `8503:8
 
 Die Compose-Datei ist auf Self-Hosting und Appliance-Setups ausgelegt:
 
-- eigenes Compose-Projekt `nestiku`
+- eigenes Compose-Projekt `nestiku-startpage`
 - Service, Container, Hostname und Netzwerk `Nestiku`
 - long-syntax Port-Mapping `8503 -> 8080`
-- persistenter Bind-Mount `./data -> /data`
-- Setup-Secret als Docker Secret aus `./secrets/setup_secret.txt`
+- persistenter Bind-Mount `/DATA/AppData/ish_nestiku/data -> /data`
+- `SESSION_SECRET` und `ISHIKU_SETUP_SECRET` als Installer-kompatible Umgebungsvariablen
 - read-only Container mit `tmpfs` fuer `/tmp`
 - `cap_drop: ALL`, `no-new-privileges`, `privileged: false`
+- `cap_add: CHOWN, SETGID, SETUID` wie bei den Ishiku-App-YAMLs
 - feste Runtime-UID/GID `10001`
 - CPU-, RAM- und PID-Limits
+- `pull_policy: always`
 - JSON-Logrotation
 - OCI-Labels und CasaOS/ZimaOS-Metadaten
 
@@ -56,7 +56,7 @@ Die Compose-Datei ist auf Self-Hosting und Appliance-Setups ausgelegt:
 
 Beim ersten Oeffnen erscheint automatisch der Setup-Dialog. Du brauchst:
 
-- Setup-Secret aus `secrets/setup_secret.txt`
+- Setup-Secret aus `ISHIKU_SETUP_SECRET`
 - Anzeigename
 - Admin-Benutzername
 - Admin-Passwort
@@ -67,7 +67,7 @@ Das Admin-Passwort muss mindestens 12 Zeichen lang sein und darf nicht mit dem S
 
 - keine Default-Zugangsdaten
 - Setup-Secret wird serverseitig geprueft
-- bevorzugt Docker Secret als Datei unter `/run/secrets/nestiku_setup_secret`
+- Setup-Secret wird ueber `ISHIKU_SETUP_SECRET` gesetzt
 - Docker Compose startet den Container read-only, ohne Linux-Capabilities und mit `no-new-privileges`
 - Container laeuft als feste UID/GID `10001` und schreibt nur nach `/data`
 - Ressourcenlimits fuer CPU, RAM und PIDs sind gesetzt
@@ -82,7 +82,7 @@ Das Admin-Passwort muss mindestens 12 Zeichen lang sein und darf nicht mit dem S
 Persistente Daten liegen im Projektordner unter:
 
 ```txt
-./data
+/DATA/AppData/ish_nestiku/data
 ```
 
 Im Container ist dieser Ordner nach `/data` gemountet.
@@ -90,13 +90,14 @@ Im Container ist dieser Ordner nach `/data` gemountet.
 Auf Linux-Hosts kann es noetig sein, dem Runtime-User Schreibrechte zu geben:
 
 ```bash
-sudo chown -R 10001:10001 data
+sudo mkdir -p /DATA/AppData/ish_nestiku/data
+sudo chown -R 10001:10001 /DATA/AppData/ish_nestiku/data
 ```
 
 Backup:
 
 ```bash
-tar -czf nestiku-backup-$(date +%Y%m%d).tar.gz data
+tar -czf nestiku-backup-$(date +%Y%m%d).tar.gz /DATA/AppData/ish_nestiku/data
 ```
 
 ## Entwicklung ohne Docker

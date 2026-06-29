@@ -1,26 +1,17 @@
-name: nestiku
+name: nestiku-startpage
 
 services:
   Nestiku:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ghcr.io/maroishiku/nestiku:latest
-    container_name: Nestiku
-    hostname: Nestiku
-    user: "10001:10001"
-    restart: unless-stopped
-    init: true
-    read_only: true
-    privileged: false
     cap_drop:
       - ALL
-    security_opt:
-      - no-new-privileges:true
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     cpus: 0.5
     cpu_shares: 90
-    mem_limit: "268435456"
-    pids_limit: 128
+    command: []
+    container_name: Nestiku
     deploy:
       resources:
         limits:
@@ -30,60 +21,72 @@ services:
         reservations:
           devices: []
     environment:
-      NODE_ENV: production
-      PORT: "8080"
-      HOST: "0.0.0.0"
-      SESSION_SECRET: "${SESSION_SECRET:?Bitte SESSION_SECRET in .env setzen}"
-      ISHIKU_SETUP_SECRET_FILE: "/run/secrets/nestiku_setup_secret"
-      NESTIKU_DATA_DIR: "/data"
-      ISHIKU_DATA_DIR: "/data"
-      ISHIKU_LOG_LEVEL: "${ISHIKU_LOG_LEVEL:-info}"
-      TZ: "${TZ:-Europe/Berlin}"
-    ports:
-      - target: 8080
-        published: "8503"
-        protocol: tcp
-    volumes:
-      - type: bind
-        source: ./data
-        target: /data
-    secrets:
-      - nestiku_setup_secret
-    tmpfs:
-      - /tmp:size=32m,mode=1777
+      - HOST=0.0.0.0
+      - ISHIKU_DATA_DIR=/data
+      - ISHIKU_LOG_LEVEL=info
+      - ISHIKU_SETUP_SECRET=${ISHIKU_SETUP_SECRET:-}
+      - NESTIKU_DATA_DIR=/data
+      - NESTIKU_GID=10001
+      - NESTIKU_UID=10001
+      - NODE_ENV=production
+      - PORT=8080
+      - SESSION_SECRET=${SESSION_SECRET:-}
+      - TZ=Europe/Berlin
+    hostname: Nestiku
     healthcheck:
       test:
-        - CMD-SHELL
-        - wget -qO- http://127.0.0.1:8080/readyz >/dev/null 2>&1 || exit 1
-      interval: 30s
+        - CMD
+        - node
+        - -e
+        - >
+          fetch('http://127.0.0.1:8080/readyz', { signal:
+          AbortSignal.timeout(3000) }).then(function (res) { if (!res.ok)
+          process.exit(1); }).catch(function () { process.exit(1); })
       timeout: 5s
+      interval: 30s
       retries: 3
       start_period: 10s
+    image: ghcr.io/maroishiku/nestiku:latest
+    init: true
+    labels:
+      icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+      org.opencontainers.image.description: Private personal startpage with secure first-run setup, link dashboard, search, weather and local JSON storage.
+      org.opencontainers.image.source: https://github.com/MaroIshiku/nestiku
+      org.opencontainers.image.title: Nestiku - Personal Startpage
+      org.opencontainers.image.url: https://github.com/MaroIshiku/nestiku
     logging:
       driver: json-file
       options:
         max-file: "3"
         max-size: 5m
-    labels:
-      icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
-      org.opencontainers.image.description: Personal startpage with secure first-run setup, private link dashboard and local JSON storage.
-      org.opencontainers.image.source: https://github.com/MaroIshiku/nestiku
-      org.opencontainers.image.title: Nestiku - Personal Startpage
-      org.opencontainers.image.url: https://github.com/MaroIshiku/nestiku
+    mem_limit: "268435456"
+    pids_limit: 128
+    ports:
+      - target: 8080
+        published: "8503"
+        protocol: tcp
+    pull_policy: always
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     stop_grace_period: 10s
     stop_signal: SIGTERM
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - type: bind
+        source: /DATA/AppData/ish_nestiku/data
+        target: /data
     devices: []
     networks:
       - Nestiku
+    privileged: false
 
 networks:
   Nestiku:
     name: Nestiku
     driver: bridge
-
-secrets:
-  nestiku_setup_secret:
-    file: ./secrets/setup_secret.txt
 
 x-casaos:
   architectures:
@@ -111,11 +114,12 @@ x-casaos:
     before_install:
       de_de: >
         Pflicht: Setze SESSION_SECRET in .env auf einen langen zufaelligen Wert.
-        Lege danach secrets/setup_secret.txt mit einem zweiten langen zufaelligen
-        Setup-Secret an.
+        Setze ISHIKU_SETUP_SECRET vor dem ersten Start auf einen zweiten langen
+        zufaelligen Wert.
 
 
-        Persistente Daten liegen standardmaessig im lokalen Ordner ./data und
+        Persistente Daten liegen auf dem ZimaOS-Host unter
+        /DATA/AppData/ish_nestiku/data und
         werden im Container nach /data gemountet. Der Container laeuft read-only,
         ohne Privilegien und als UID/GID 10001.
 
@@ -123,11 +127,12 @@ x-casaos:
         Veroeffentliche die WebUI ueber HTTPS, wenn du die Startpage ausserhalb
         deines lokalen Netzes erreichbar machst.
       en_us: >
-        Required: set SESSION_SECRET in .env to a long random value. Then create
-        secrets/setup_secret.txt with a second long random setup secret.
+        Required: set SESSION_SECRET to a long random value. Set
+        ISHIKU_SETUP_SECRET to a second long random value before the first start.
 
 
-        Persistent data is stored in the local ./data folder by default and is
+        Persistent data is stored on the ZimaOS host under
+        /DATA/AppData/ish_nestiku/data and is
         mounted into the container at /data. The container runs read-only,
         without privileges and as UID/GID 10001.
 
