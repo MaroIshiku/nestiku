@@ -1,7 +1,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const dns = require('dns').promises;
 const fs = require('fs').promises;
+const net = require('net');
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -11,6 +13,7 @@ const {
   SESSION_MAX_AGE_MS,
   createSession,
   hashPassword,
+  setSessionSecret,
   timingSafeEqualString,
   verifyPassword,
   verifySession
@@ -66,9 +69,6 @@ const linksStore = new JsonStore(path.join(DATA_DIR, 'links.json'), DEFAULT_LINK
 const settingsStore = new JsonStore(path.join(DATA_DIR, 'settings.json'), DEFAULT_SETTINGS);
 
 const app = express();
-if (IS_PROD && !process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET muss in Produktion gesetzt sein.');
-}
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '512kb' }));
@@ -291,12 +291,45 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-ensureAuthState()
+ensureSessionSecret()
+  .then(() => ensureAuthState())
   .then(() => app.listen(PORT, HOST, () => console.log(`Nestiku listening on http://${HOST}:${PORT}`)))
   .catch((error) => {
     console.error(error);
     process.exit(1);
   });
+
+async function ensureSessionSecret() {
+  const envSecret = clean(process.env.SESSION_SECRET, 500);
+  if (envSecret) {
+    setSessionSecret(envSecret);
+    return;
+  }
+
+  const filePath = path.join(DATA_DIR, 'session_secret');
+  try {
+    const value = (await fs.readFile(filePath, 'utf8')).trim();
+    if (value.length >= 32) {
+      setSessionSecret(value);
+      return;
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  const value = crypto.randomBytes(48).toString('base64url');
+  try {
+    await fs.writeFile(filePath, `${value}\n`, { mode: 0o600, flag: 'wx' });
+    setSessionSecret(value);
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const existing = (await fs.readFile(filePath, 'utf8')).trim();
+    if (existing.length < 32) throw new Error('Persistentes Session-Secret ist ungueltig.');
+    setSessionSecret(existing);
+  }
+  if (IS_PROD) console.warn('SESSION_SECRET fehlt; Nestiku nutzt ein automatisch erzeugtes persistentes Secret aus /data/session_secret.');
+}
 
 function securityHeaders(req, res, next) {
   res.setHeader('Content-Security-Policy', [
@@ -482,14 +515,36 @@ async function fetchWithTimeout(url, options = {}) {
   return fetch(url, { ...options, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
 
+async function fetchPublicWithTimeout(rawUrl, options = {}, redirects = 3) {
+  const url = rawUrl instanceof URL ? rawUrl : parseHttpUrl(rawUrl);
+  await assertPublicHostname(url.hostname);
+  const response = await fetch(url, {
+    ...options,
+    redirect: 'manual',
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+  });
+  if ([301, 302, 303, 307, 308].includes(response.status) && redirects > 0) {
+    const location = response.headers.get('location');
+    if (!location) return response;
+    return fetchPublicWithTimeout(new URL(location, url).toString(), options, redirects - 1);
+  }
+  return response;
+}
+
 async function cacheFavicon(rawUrl) {
   const pageUrl = parseHttpUrl(rawUrl);
+  await assertPublicHostname(pageUrl.hostname);
   const host = pageUrl.hostname.replace(/^www\./, '').toLowerCase();
   const base = crypto.createHash('sha256').update(host).digest('hex').slice(0, 24);
-  const candidates = [new URL('/apple-touch-icon.png', pageUrl), new URL('/favicon.ico', pageUrl)];
+  const candidates = await faviconCandidates(pageUrl);
   for (const candidate of candidates) {
     try {
-      const response = await fetchWithTimeout(candidate, { headers: { 'User-Agent': 'nestiku/2.0' } });
+      const response = await fetchPublicWithTimeout(candidate, {
+        headers: {
+          Accept: 'image/avif,image/webp,image/png,image/svg+xml,image/jpeg,image/x-icon,*/*;q=0.5',
+          'User-Agent': 'nestiku/2.0'
+        }
+      });
       if (!response.ok) continue;
       const type = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
       const ext = iconExt(type, candidate);
@@ -503,6 +558,73 @@ async function cacheFavicon(rawUrl) {
     } catch {}
   }
   return { icon: '', color: domainColorIndex(pageUrl.toString()), domain: host };
+}
+
+async function faviconCandidates(pageUrl) {
+  const seen = new Set();
+  const candidates = [];
+  const add = (value) => {
+    try {
+      const url = new URL(value, pageUrl);
+      if (!['http:', 'https:'].includes(url.protocol)) return;
+      const key = url.toString();
+      if (!seen.has(key)) {
+        seen.add(key);
+        candidates.push(url);
+      }
+    } catch {}
+  };
+
+  try {
+    const response = await fetchPublicWithTimeout(pageUrl, {
+      headers: { Accept: 'text/html,*/*;q=0.2', 'User-Agent': 'nestiku/2.0' }
+    });
+    const type = (response.headers.get('content-type') || '').toLowerCase();
+    if (response.ok && type.includes('text/html')) {
+      const html = Buffer.from(await response.arrayBuffer()).slice(0, 256 * 1024).toString('utf8');
+      for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+        const tag = match[0];
+        const rel = attrValue(tag, 'rel').toLowerCase();
+        const href = attrValue(tag, 'href');
+        if (href && /\b(apple-touch-icon|icon|shortcut icon|mask-icon)\b/.test(rel)) add(href);
+      }
+    }
+  } catch {}
+
+  add('/apple-touch-icon.png');
+  add('/apple-touch-icon-precomposed.png');
+  add('/favicon.svg');
+  add('/favicon.png');
+  add('/favicon.ico');
+  return candidates.slice(0, 12);
+}
+
+function attrValue(tag, name) {
+  const pattern = new RegExp(`${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i');
+  const match = tag.match(pattern);
+  return match ? (match[1] || match[2] || match[3] || '') : '';
+}
+
+async function assertPublicHostname(hostname) {
+  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!normalized || normalized === 'localhost' || normalized.endsWith('.localhost')) throw new Error('Lokale Adressen sind fuer Favicons nicht erlaubt.');
+  const addresses = net.isIP(normalized) ? [{ address: normalized }] : await dns.lookup(normalized, { all: true, verbatim: false });
+  if (!addresses.length) throw new Error('Host konnte nicht aufgeloest werden.');
+  if (addresses.some((item) => isPrivateAddress(item.address))) throw new Error('Private oder lokale Adressen sind fuer Favicons nicht erlaubt.');
+}
+
+function isPrivateAddress(address) {
+  const version = net.isIP(address);
+  if (version === 4) {
+    const parts = address.split('.').map(Number);
+    return parts[0] === 0 || parts[0] === 10 || parts[0] === 127 || (parts[0] === 169 && parts[1] === 254) || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || (parts[0] === 192 && parts[1] === 168) || parts[0] >= 224;
+  }
+  if (version === 6) {
+    const value = address.toLowerCase();
+    if (value === '::1' || value === '::' || value.startsWith('fc') || value.startsWith('fd') || value.startsWith('fe80:')) return true;
+    if (value.startsWith('::ffff:')) return isPrivateAddress(value.replace('::ffff:', ''));
+  }
+  return false;
 }
 
 function iconExt(type, url) {

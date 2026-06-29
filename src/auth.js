@@ -5,9 +5,14 @@ const { promisify } = require('util');
 
 const scrypt = promisify(crypto.scrypt);
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+let sessionSecret = process.env.SESSION_SECRET || '';
 
 function secret() {
-  return process.env.SESSION_SECRET || 'dev-secret-change-me';
+  return sessionSecret || process.env.SESSION_SECRET || 'dev-secret-change-me';
+}
+
+function setSessionSecret(value) {
+  sessionSecret = String(value || '');
 }
 
 async function hashPassword(password) {
@@ -77,6 +82,7 @@ module.exports = {
   SESSION_MAX_AGE_MS,
   createSession,
   hashPassword,
+  setSessionSecret,
   timingSafeEqualString,
   verifyPassword,
   verifySession

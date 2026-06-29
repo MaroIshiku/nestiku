@@ -7,8 +7,9 @@ Nestiku ist eine kleine, sichere Startseiten-App mit Suche, Wetter, Schnellzugri
 ## Funktionen
 
 - geschuetzte persoenliche Startseite mit Uhr, Begruessung, Wetter und Suche
-- Schnellzugriffe mit Farben, Texticons oder gecachten Favicons
-- Adminbereich fuer Links, Standort, Wetter, Suchmaschine und Anmeldedaten
+- Schnellzugriffe mit Farben, Texticons oder sicher gecachten Favicons
+- Linkbearbeitung direkt auf der Startseite
+- Settings fuer Standort, Wetter, Suchmaschine, Darstellung und Anmeldedaten
 - First-Run-Setup fuer den ersten Adminaccount
 - sechs Themes: Lavender, Mint, Sky, Amber, Rose, Graphite
 - Light, Dark und System Mode
@@ -20,7 +21,9 @@ Nestiku ist eine kleine, sichere Startseiten-App mit Suche, Wetter, Schnellzugri
 cp .env.example .env
 ```
 
-Setze in `.env` eigene Werte fuer `SESSION_SECRET` und `ISHIKU_SETUP_SECRET`, dann:
+Setze in `.env` mindestens `ISHIKU_SETUP_SECRET`. Ein eigenes `SESSION_SECRET`
+ist empfohlen; wenn es leer bleibt, erzeugt Nestiku beim ersten Start ein
+persistentes Secret unter `/data/session_secret`.
 
 ```bash
 docker compose up -d
@@ -44,6 +47,7 @@ Die Compose-Datei ist auf Self-Hosting und Appliance-Setups ausgelegt:
 - long-syntax Port-Mapping `8503 -> 8080`
 - persistenter Bind-Mount `/DATA/AppData/ish_nestiku/data -> /data`
 - `SESSION_SECRET` und `ISHIKU_SETUP_SECRET` als Installer-kompatible Umgebungsvariablen
+- automatisches persistentes Session-Secret unter `/data/session_secret`, falls `SESSION_SECRET` leer bleibt
 - read-only Container mit `tmpfs` fuer `/tmp`
 - `cap_drop: ALL`, `no-new-privileges`, `privileged: false`
 - `cap_add: CHOWN, SETGID, SETUID` wie bei den Ishiku-App-YAMLs
@@ -73,6 +77,8 @@ Das Admin-Passwort muss mindestens 12 Zeichen lang sein und darf nicht mit dem S
 - keine Default-Zugangsdaten
 - Setup-Secret wird serverseitig geprueft
 - Setup-Secret wird ueber `ISHIKU_SETUP_SECRET` gesetzt
+- Session-Secret wird aus `SESSION_SECRET` oder persistent aus `/data/session_secret` geladen
+- Favicon-Abrufe blockieren lokale und private Zieladressen
 - Docker Compose startet den Container read-only, ohne Linux-Capabilities und mit `no-new-privileges`
 - Container laeuft als feste UID/GID `10001` und schreibt nur nach `/data`
 - Ressourcenlimits fuer CPU, RAM und PIDs sind gesetzt

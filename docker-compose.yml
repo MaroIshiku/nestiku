@@ -113,9 +113,10 @@ x-casaos:
   tips:
     before_install:
       de_de: >
-        Pflicht: Setze SESSION_SECRET in .env auf einen langen zufaelligen Wert.
-        Setze ISHIKU_SETUP_SECRET vor dem ersten Start auf einen zweiten langen
-        zufaelligen Wert.
+        Empfohlen: Setze SESSION_SECRET auf einen langen zufaelligen Wert.
+        Wenn SESSION_SECRET leer bleibt, erzeugt Nestiku beim ersten Start ein
+        persistentes Secret unter /data/session_secret. Setze ISHIKU_SETUP_SECRET
+        vor dem ersten Start auf einen zweiten langen zufaelligen Wert.
 
 
         Persistente Daten liegen auf dem ZimaOS-Host unter
@@ -127,8 +128,10 @@ x-casaos:
         Veroeffentliche die WebUI ueber HTTPS, wenn du die Startpage ausserhalb
         deines lokalen Netzes erreichbar machst.
       en_us: >
-        Required: set SESSION_SECRET to a long random value. Set
-        ISHIKU_SETUP_SECRET to a second long random value before the first start.
+        Recommended: set SESSION_SECRET to a long random value. If
+        SESSION_SECRET is empty, Nestiku creates a persistent secret at
+        /data/session_secret on first start. Set ISHIKU_SETUP_SECRET to a second
+        long random value before the first start.
 
 
         Persistent data is stored on the ZimaOS host under

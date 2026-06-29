@@ -9,6 +9,7 @@ export const state = {
   themes: ['lavender', 'mint', 'sky', 'amber', 'rose', 'graphite'],
   modes: ['system', 'light', 'dark'],
   weather: null,
+  editingLinks: false,
   editingLink: -1,
   linkPage: 0,
   activeAdminTab: 'settings',
