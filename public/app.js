@@ -201,10 +201,7 @@ function renderStart() {
 }
 
 function renderLinks() {
-  if (!state.links.length) {
-    if (state.editingLinks) {
-      return `<div class="links-grid"><button class="card link-card add-link-card" type="button" data-link-add>${icon('plus')}<span>Add link</span></button></div>`;
-    }
+  if (!state.links.length && !state.editingLinks) {
     return `
       <div class="empty tonal-card">
         <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
@@ -218,13 +215,18 @@ function renderLinks() {
   }
   const perPage = state.settings.display.linksPerPage || 6;
   const linkView = state.settings.display.linkView === 'list' ? 'list' : 'grid';
+  const totalItems = state.links.length + (state.editingLinks ? 1 : 0);
   const pages = [];
-  for (let index = 0; index < state.links.length; index += perPage) pages.push(state.links.slice(index, index + perPage));
+  for (let index = 0; index < totalItems; index += perPage) pages.push({ start: index, end: Math.min(index + perPage, totalItems) });
   if (state.linkPage >= pages.length) state.linkPage = Math.max(0, pages.length - 1);
-  const page = pages[state.linkPage] || [];
-  const items = page.map((link) => linkTile(link, state.links.indexOf(link))).join('');
-  const addTile = state.editingLinks ? `<button class="card link-card add-link-card" type="button" data-link-add>${icon('plus')}<span>Add link</span></button>` : '';
-  return `<div class="links-grid ${linkView === 'list' ? 'list-view' : ''}">${items}${addTile}</div>${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}`;
+  const page = pages[state.linkPage] || { start: 0, end: 0 };
+  const items = [];
+  for (let index = page.start; index < page.end; index += 1) {
+    items.push(index < state.links.length
+      ? linkTile(state.links[index], index)
+      : `<button class="card link-card add-link-card" type="button" data-link-add>${icon('plus')}<span>Add link</span></button>`);
+  }
+  return `<div class="links-grid ${linkView === 'list' ? 'list-view' : ''}">${items.join('')}</div>${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}`;
 }
 
 function linkCountLabel() {
