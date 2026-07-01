@@ -1,4 +1,4 @@
-import { api } from './js/api.js?v=20260701c';
+import { api } from './js/api.js?v=20260701d';
 import {
   $,
   $$,
@@ -14,11 +14,11 @@ import {
   safeColor,
   selectField,
   toast
-} from './js/dom.js?v=20260701c';
-import { icon } from './js/icons.js?v=20260701c';
-import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260701c';
-import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260701c';
-import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260701c';
+} from './js/dom.js?v=20260701d';
+import { icon } from './js/icons.js?v=20260701d';
+import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260701d';
+import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260701d';
+import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260701d';
 
 const GRID_PRESETS = {
   '2x2': { columns: 2, rows: 2, count: 4, label: '2x2' },
@@ -277,7 +277,8 @@ function renderLinks() {
   const display = normalizeDisplay(state.settings.display || {});
   const perPage = currentLinksPerPage(display);
   const view = linkView(display);
-  const grid = GRID_PRESETS[gridPreset(display)];
+  const preset = gridPreset(display);
+  const grid = GRID_PRESETS[preset];
   const totalItems = state.links.length + (state.editingLinks ? 1 : 0);
   const pages = [];
   for (let index = 0; index < totalItems; index += perPage) pages.push({ start: index, end: Math.min(index + perPage, totalItems) });
@@ -291,7 +292,7 @@ function renderLinks() {
   }
   const editorVisible = state.editingLinks && state.editingLink >= page.start && state.editingLink < page.end;
   return `
-    <div class="links-grid ${view === 'list' ? 'list-view' : ''}" style="--grid-cols: ${grid.columns}; --grid-rows: ${grid.rows}">${items.join('')}</div>
+    <div class="links-grid grid-preset-${preset} ${view === 'list' ? 'list-view' : ''}" style="--grid-cols: ${grid.columns}; --grid-rows: ${grid.rows}">${items.join('')}</div>
     ${editorVisible ? renderLinkEditor() : ''}
     ${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}
   `;
