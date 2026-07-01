@@ -12,7 +12,7 @@ export function sheetHeader(title, { back = false } = {}) {
     <div class="sheet-head">
       ${backButton}
       <h2>${title}</h2>
-      <a class="icon-button" href="/?v=20260701b" aria-label="Close">${icon('close')}</a>
+      <a class="icon-button" href="/?v=20260701c" aria-label="Close">${icon('close')}</a>
     </div>
   `;
 }

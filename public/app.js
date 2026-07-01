@@ -1,4 +1,4 @@
-import { api } from './js/api.js?v=20260701b';
+import { api } from './js/api.js?v=20260701c';
 import {
   $,
   $$,
@@ -14,11 +14,11 @@ import {
   safeColor,
   selectField,
   toast
-} from './js/dom.js?v=20260701b';
-import { icon } from './js/icons.js?v=20260701b';
-import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260701b';
-import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260701b';
-import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260701b';
+} from './js/dom.js?v=20260701c';
+import { icon } from './js/icons.js?v=20260701c';
+import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260701c';
+import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260701c';
+import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260701c';
 
 const GRID_PRESETS = {
   '2x2': { columns: 2, rows: 2, count: 4, label: '2x2' },
@@ -71,7 +71,7 @@ function normalizeDisplay(display = {}) {
   const gridPreset = GRID_PRESETS[display.gridPreset]
     ? display.gridPreset
     : ({ 4: '2x2', 6: '3x2', 9: '3x3', 12: '3x4' }[legacyPerPage] || '3x2');
-  const listPerPage = clampInt(display.listPerPage ?? legacyPerPage, 1, 12, 6);
+  const listPerPage = clampInt(display.listPerPage ?? legacyPerPage, 1, 15, 6);
   return {
     ...display,
     linksPerPage: GRID_PRESETS[gridPreset].count,
@@ -100,7 +100,7 @@ function linkView(display = state.settings?.display || {}) {
 
 function currentLinksPerPage(display = state.settings?.display || {}) {
   return linkView(display) === 'list'
-    ? clampInt(display.listPerPage, 1, 12, 6)
+    ? clampInt(display.listPerPage, 1, 15, 6)
     : GRID_PRESETS[gridPreset(display)].count;
 }
 
@@ -291,7 +291,7 @@ function renderLinks() {
   }
   const editorVisible = state.editingLinks && state.editingLink >= page.start && state.editingLink < page.end;
   return `
-    <div class="links-grid ${view === 'list' ? 'list-view' : ''}" style="--grid-cols: ${grid.columns}">${items.join('')}</div>
+    <div class="links-grid ${view === 'list' ? 'list-view' : ''}" style="--grid-cols: ${grid.columns}; --grid-rows: ${grid.rows}">${items.join('')}</div>
     ${editorVisible ? renderLinkEditor() : ''}
     ${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}
   `;
@@ -384,7 +384,7 @@ function renderEditToolbar(display) {
         <button type="button" data-link-view="list" aria-selected="${view === 'list'}">List</button>
       </div>
       ${view === 'list'
-        ? `<label class="field"><span class="label">Items per page</span><input class="input" name="listPerPageToolbar" type="number" min="1" max="12" step="1" required value="${escapeAttr(normalized.listPerPage)}"></label>`
+        ? `<label class="field"><span class="label">Items per page</span><input class="input" name="listPerPageToolbar" type="number" min="1" max="15" step="1" required value="${escapeAttr(normalized.listPerPage)}"></label>`
         : selectField('Grid', 'gridPresetToolbar', Object.entries(GRID_PRESETS).map(([key, value]) => [key, value.label]), gridPreset(normalized))}
       <button class="icon-button tonal-icon" type="button" data-link-save aria-label="Save links">${icon('save')}</button>
     </div>
@@ -536,7 +536,7 @@ async function saveDisplayFromToolbar(event) {
   if (event?.preventDefault) event.preventDefault();
   const selectedView = event?.currentTarget?.dataset?.linkView || linkView(state.settings.display);
   const selectedGrid = $('[name="gridPresetToolbar"]')?.value || gridPreset(state.settings.display);
-  const listPerPage = clampInt($('[name="listPerPageToolbar"]')?.value ?? state.settings.display.listPerPage, 1, 12, 6);
+  const listPerPage = clampInt($('[name="listPerPageToolbar"]')?.value ?? state.settings.display.listPerPage, 1, 15, 6);
   const settings = {
     ...state.settings,
     display: displaySettings({
