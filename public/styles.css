@@ -180,6 +180,13 @@ img, svg { display: block; max-width: 100%; }
   border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
   position: relative;
 }
+.link-card.editable-link.is-selected {
+  border-color: color-mix(in srgb, var(--primary) 64%, var(--line));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 58%, transparent), transparent 72%),
+    color-mix(in srgb, var(--primary-soft) 34%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent), var(--shadow-soft);
+}
 .tile-actions {
   display: flex;
   flex-wrap: wrap;
@@ -195,7 +202,37 @@ img, svg { display: block; max-width: 100%; }
   background: color-mix(in srgb, var(--primary-soft) 36%, var(--surface));
 }
 .add-link-card svg { width: 28px; height: 28px; }
-.link-card-editor { min-height: 260px; justify-content: start; }
+.link-detail-editor {
+  margin-top: var(--space-4);
+  display: grid;
+  grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr);
+  gap: var(--space-5);
+  align-items: start;
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--line));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 46%, transparent), transparent 62%),
+    var(--surface);
+}
+.editor-preview {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  min-width: 0;
+}
+.editor-preview .link-icon { width: 58px; height: 58px; }
+.editor-preview h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.editor-preview p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
 .link-card:active { transform: scale(.99); }
 .link-icon {
   width: 48px; height: 48px; border-radius: var(--radius-md); display: grid; place-items: center; overflow: hidden; font-weight: 900;
@@ -388,6 +425,7 @@ img, svg { display: block; max-width: 100%; }
   .settings-nav { grid-template-columns: 1fr; }
   .edit-toolbar { grid-template-columns: 1fr; }
   .edit-toolbar .icon-button { width: 100%; }
+  .link-detail-editor { grid-template-columns: 1fr; }
   .link-editor-row { grid-template-columns: 48px minmax(0, 1fr); }
   .link-editor-row .mini-actions { grid-column: 1 / -1; justify-content: flex-end; }
   .favicon-line { grid-template-columns: 1fr; }

@@ -226,7 +226,12 @@ function renderLinks() {
       ? linkTile(state.links[index], index)
       : `<button class="card link-card add-link-card" type="button" data-link-add>${icon('plus')}<span>Add link</span></button>`);
   }
-  return `<div class="links-grid ${linkView === 'list' ? 'list-view' : ''}">${items.join('')}</div>${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}`;
+  const editorVisible = state.editingLinks && state.editingLink >= page.start && state.editingLink < page.end;
+  return `
+    <div class="links-grid ${linkView === 'list' ? 'list-view' : ''}">${items.join('')}</div>
+    ${editorVisible ? renderLinkEditor() : ''}
+    ${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}
+  `;
 }
 
 function linkCountLabel() {
@@ -320,25 +325,6 @@ function renderEditToolbar(display) {
 }
 
 function linkTile(link, index) {
-  if (state.editingLink === index) {
-    return `
-      <article class="card link-card link-card-editor" data-editor="${index}">
-        <div class="form">
-          ${field('Title', 'title', 'text', 'off', true, link.title || '')}
-          ${field('URL', 'url', 'url', 'off', true, link.url || '')}
-          <div class="favicon-line">
-            ${field('Icon or image path', 'icon', 'text', 'off', false, link.icon || '')}
-            <button class="button tonal" type="button" data-fetch-icon="${index}">Auto</button>
-          </div>
-          <div class="color-grid">${Array.from({ length: 10 }, (_, color) => `<button class="color-dot c${color} ${safeColor(link.color) === color ? 'selected' : ''}" type="button" data-color="${color}" aria-label="Accent ${color + 1}"></button>`).join('')}</div>
-          <div class="actions">
-            <button class="button filled" type="button" data-link-apply="${index}">Apply</button>
-            <button class="button text" type="button" data-link-cancel>Cancel</button>
-          </div>
-        </div>
-      </article>
-    `;
-  }
   const content = `
     <span class="link-icon c${safeColor(link.color)}">${iconOrText(link.icon, link.title)}</span>
     <span><span class="link-title">${escapeHTML(link.title)}</span><span class="link-domain">${escapeHTML(domain(link.url))}</span></span>
@@ -346,8 +332,9 @@ function linkTile(link, index) {
   if (!state.editingLinks) {
     return `<a class="card link-card" href="${escapeAttr(link.url)}" rel="noopener noreferrer">${content}</a>`;
   }
+  const isEditing = state.editingLink === index;
   return `
-    <article class="card link-card editable-link">
+    <article class="card link-card editable-link ${isEditing ? 'is-selected' : ''}" ${isEditing ? 'aria-current="true"' : ''}>
       ${content}
       <span class="tile-actions">
         <button class="icon-button tonal-icon" type="button" data-link-up="${index}" aria-label="Move up">${icon('up')}</button>
@@ -356,6 +343,38 @@ function linkTile(link, index) {
         <button class="icon-button tonal-icon" type="button" data-link-delete="${index}" aria-label="Delete link">${icon('close')}</button>
       </span>
     </article>
+  `;
+}
+
+function renderLinkEditor() {
+  const index = state.editingLink;
+  const link = state.links[index];
+  if (!link) return '';
+  return `
+    <section class="card link-detail-editor" data-editor="${index}" aria-label="Edit selected link">
+      <div class="editor-preview">
+        <span class="link-icon c${safeColor(link.color)}">${iconOrText(link.icon, link.title)}</span>
+        <div>
+          <h3>${escapeHTML(link.title || 'New link')}</h3>
+          <p>${escapeHTML(link.url || 'Add a URL to finish this bookmark.')}</p>
+        </div>
+      </div>
+      <div class="form">
+        <div class="form-row">
+          ${field('Title', 'title', 'text', 'off', true, link.title || '')}
+          ${field('URL', 'url', 'url', 'off', true, link.url || '')}
+        </div>
+        <div class="favicon-line">
+          ${field('Icon or image path', 'icon', 'text', 'off', false, link.icon || '')}
+          <button class="button tonal" type="button" data-fetch-icon="${index}">Auto</button>
+        </div>
+        <div class="color-grid">${Array.from({ length: 10 }, (_, color) => `<button class="color-dot c${color} ${safeColor(link.color) === color ? 'selected' : ''}" type="button" data-color="${color}" aria-label="Accent ${color + 1}"></button>`).join('')}</div>
+        <div class="actions">
+          <button class="button filled" type="button" data-link-apply="${index}">Apply</button>
+          <button class="button text" type="button" data-link-cancel>Cancel</button>
+        </div>
+      </div>
+    </section>
   `;
 }
 
