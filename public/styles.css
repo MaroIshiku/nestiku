@@ -158,7 +158,7 @@ img, svg { display: block; max-width: 100%; }
 .section-head h2 { margin: 0; font-size: 18px; line-height: 24px; }
 .section-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; font-weight: 650; }
 .links-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-@media (min-width: 720px) { .links-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 720px) { .links-grid { grid-template-columns: repeat(var(--grid-cols, 3), minmax(0, 1fr)); } }
 .links-grid.list-view { grid-template-columns: 1fr; }
 .link-card {
   min-height: 124px;

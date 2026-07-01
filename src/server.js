@@ -45,7 +45,15 @@ const DEFAULT_SETTINGS = {
     timezone: 'Europe/Berlin'
   },
   weather: { enabled: true, unit: 'celsius', refreshMinutes: 30 },
-  display: { linksPerPage: 6, linkView: 'grid', searchEngine: 'duckduckgo', theme: 'lavender', mode: 'system' }
+  display: {
+    linksPerPage: 6,
+    gridPreset: '3x2',
+    listPerPage: 6,
+    linkView: 'grid',
+    searchEngine: 'duckduckgo',
+    theme: 'lavender',
+    mode: 'system'
+  }
 };
 
 const DEFAULT_LINKS = { links: [] };
@@ -467,6 +475,9 @@ function validateSettings(input) {
   if (input.display && typeof input.display === 'object') {
     const perPage = parseInt(input.display.linksPerPage, 10);
     if ([4, 6, 8, 9, 12].includes(perPage)) out.display.linksPerPage = perPage;
+    if (['2x2', '3x2', '3x3', '3x4'].includes(input.display.gridPreset)) out.display.gridPreset = input.display.gridPreset;
+    const listPerPage = parseInt(input.display.listPerPage, 10);
+    if (Number.isInteger(listPerPage) && listPerPage >= 1 && listPerPage <= 12) out.display.listPerPage = listPerPage;
     if (['grid', 'list'].includes(input.display.linkView)) out.display.linkView = input.display.linkView;
     if (SEARCH_ENGINES[input.display.searchEngine]) out.display.searchEngine = input.display.searchEngine;
     if (THEMES.includes(input.display.theme)) out.display.theme = input.display.theme;

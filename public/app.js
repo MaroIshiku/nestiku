@@ -1,4 +1,4 @@
-import { api } from './js/api.js?v=20260630f';
+import { api } from './js/api.js?v=20260701b';
 import {
   $,
   $$,
@@ -14,11 +14,18 @@ import {
   safeColor,
   selectField,
   toast
-} from './js/dom.js?v=20260630f';
-import { icon } from './js/icons.js?v=20260630f';
-import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260630f';
-import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260630f';
-import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260630f';
+} from './js/dom.js?v=20260701b';
+import { icon } from './js/icons.js?v=20260701b';
+import { closeSheet, openSheet, sheetHeader } from './js/sheets.js?v=20260701b';
+import { MODE_LABELS, state, THEME_LABELS, WEEKDAYS } from './js/state.js?v=20260701b';
+import { applyTheme, getStoredMode, getStoredTheme, initTheme } from './js/theme.js?v=20260701b';
+
+const GRID_PRESETS = {
+  '2x2': { columns: 2, rows: 2, count: 4, label: '2x2' },
+  '3x2': { columns: 3, rows: 2, count: 6, label: '3x2' },
+  '3x3': { columns: 3, rows: 3, count: 9, label: '3x3' },
+  '3x4': { columns: 3, rows: 4, count: 12, label: '3x4' }
+};
 
 boot();
 
@@ -47,14 +54,68 @@ async function loadBootstrap() {
 
 async function loadAppData() {
   const data = await api('/api/data');
+  const settings = data.settings || {};
+  settings.display = normalizeDisplay(settings.display || {});
   Object.assign(state, {
     app: data.app,
     user: data.user,
-    settings: data.settings,
+    settings,
     links: data.links || [],
     searchEngines: data.searchEngines || {}
   });
-  applyTheme(data.settings?.display?.theme || getStoredTheme(), data.settings?.display?.mode || getStoredMode(), false);
+  applyTheme(settings.display?.theme || getStoredTheme(), settings.display?.mode || getStoredMode(), false);
+}
+
+function normalizeDisplay(display = {}) {
+  const legacyPerPage = Number(display.linksPerPage) || 6;
+  const gridPreset = GRID_PRESETS[display.gridPreset]
+    ? display.gridPreset
+    : ({ 4: '2x2', 6: '3x2', 9: '3x3', 12: '3x4' }[legacyPerPage] || '3x2');
+  const listPerPage = clampInt(display.listPerPage ?? legacyPerPage, 1, 12, 6);
+  return {
+    ...display,
+    linksPerPage: GRID_PRESETS[gridPreset].count,
+    gridPreset,
+    listPerPage,
+    linkView: display.linkView === 'list' ? 'list' : 'grid',
+    searchEngine: display.searchEngine || 'duckduckgo',
+    theme: display.theme || getStoredTheme(),
+    mode: display.mode || getStoredMode()
+  };
+}
+
+function clampInt(value, min, max, fallback) {
+  const number = parseInt(value, 10);
+  if (!Number.isInteger(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function gridPreset(display = state.settings?.display || {}) {
+  return GRID_PRESETS[display.gridPreset] ? display.gridPreset : '3x2';
+}
+
+function linkView(display = state.settings?.display || {}) {
+  return display.linkView === 'list' ? 'list' : 'grid';
+}
+
+function currentLinksPerPage(display = state.settings?.display || {}) {
+  return linkView(display) === 'list'
+    ? clampInt(display.listPerPage, 1, 12, 6)
+    : GRID_PRESETS[gridPreset(display)].count;
+}
+
+function displaySettings(overrides = {}) {
+  const current = normalizeDisplay(state.settings?.display || {});
+  const next = normalizeDisplay({ ...current, ...overrides });
+  return {
+    linksPerPage: GRID_PRESETS[next.gridPreset].count,
+    gridPreset: next.gridPreset,
+    listPerPage: next.listPerPage,
+    linkView: next.linkView,
+    searchEngine: next.searchEngine,
+    theme: next.theme,
+    mode: next.mode
+  };
 }
 
 function shell(content, actions = '') {
@@ -213,8 +274,10 @@ function renderLinks() {
       </div>
     `;
   }
-  const perPage = state.settings.display.linksPerPage || 6;
-  const linkView = state.settings.display.linkView === 'list' ? 'list' : 'grid';
+  const display = normalizeDisplay(state.settings.display || {});
+  const perPage = currentLinksPerPage(display);
+  const view = linkView(display);
+  const grid = GRID_PRESETS[gridPreset(display)];
   const totalItems = state.links.length + (state.editingLinks ? 1 : 0);
   const pages = [];
   for (let index = 0; index < totalItems; index += perPage) pages.push({ start: index, end: Math.min(index + perPage, totalItems) });
@@ -228,7 +291,7 @@ function renderLinks() {
   }
   const editorVisible = state.editingLinks && state.editingLink >= page.start && state.editingLink < page.end;
   return `
-    <div class="links-grid ${linkView === 'list' ? 'list-view' : ''}">${items.join('')}</div>
+    <div class="links-grid ${view === 'list' ? 'list-view' : ''}" style="--grid-cols: ${grid.columns}">${items.join('')}</div>
     ${editorVisible ? renderLinkEditor() : ''}
     ${pages.length > 1 ? `<div class="pager">${pages.map((_, index) => `<button class="pager-dot" type="button" data-page="${index}" aria-current="${index === state.linkPage}">${index + 1}</button>`).join('')}</div>` : ''}
   `;
@@ -312,13 +375,17 @@ function settingsPanel() {
 }
 
 function renderEditToolbar(display) {
+  const normalized = normalizeDisplay(display);
+  const view = linkView(normalized);
   return `
     <div class="edit-toolbar">
       <div class="segmented compact-segmented" aria-label="Link view">
-        <button type="button" data-link-view="grid" aria-selected="${(display.linkView || 'grid') !== 'list'}">Icons</button>
-        <button type="button" data-link-view="list" aria-selected="${display.linkView === 'list'}">List</button>
+        <button type="button" data-link-view="grid" aria-selected="${view === 'grid'}">Icons</button>
+        <button type="button" data-link-view="list" aria-selected="${view === 'list'}">List</button>
       </div>
-      ${selectField('Per page', 'linksPerPageToolbar', [['4','4'],['6','6'],['8','8'],['9','9'],['12','12']], String(display.linksPerPage || 6))}
+      ${view === 'list'
+        ? `<label class="field"><span class="label">Items per page</span><input class="input" name="listPerPageToolbar" type="number" min="1" max="12" step="1" required value="${escapeAttr(normalized.listPerPage)}"></label>`
+        : selectField('Grid', 'gridPresetToolbar', Object.entries(GRID_PRESETS).map(([key, value]) => [key, value.label]), gridPreset(normalized))}
       <button class="icon-button tonal-icon" type="button" data-link-save aria-label="Save links">${icon('save')}</button>
     </div>
   `;
@@ -414,7 +481,8 @@ function bindLinkEditor() {
     renderStart();
   });
   $('[data-link-save]')?.addEventListener('click', saveLinks);
-  $('[name="linksPerPageToolbar"]')?.addEventListener('change', saveDisplayFromToolbar);
+  $('[name="gridPresetToolbar"]')?.addEventListener('change', saveDisplayFromToolbar);
+  $('[name="listPerPageToolbar"]')?.addEventListener('change', saveDisplayFromToolbar);
   $$('[data-link-view]').forEach((el) => el.addEventListener('click', saveDisplayFromToolbar));
   $$('[data-link-edit]').forEach((el) => el.addEventListener('click', () => { state.editingLink = Number(el.dataset.linkEdit); state.editingLinks = true; renderStart(); }));
   $$('[data-link-delete]').forEach((el) => el.addEventListener('click', () => { state.links.splice(Number(el.dataset.linkDelete), 1); state.editingLink = -1; renderStart(); }));
@@ -453,13 +521,11 @@ async function saveSettings(event) {
       unit: form.get('weatherUnit'),
       refreshMinutes: form.get('weatherRefresh')
     },
-    display: {
-      linksPerPage: state.settings.display.linksPerPage,
-      linkView: state.settings.display.linkView || 'grid',
+    display: displaySettings({
       searchEngine: form.get('searchEngine'),
       theme: getStoredTheme(),
       mode: getStoredMode()
-    }
+    })
   };
   const result = await api('/api/admin/settings', { method: 'PUT', body: settings });
   state.settings = result.settings;
@@ -468,17 +534,16 @@ async function saveSettings(event) {
 
 async function saveDisplayFromToolbar(event) {
   if (event?.preventDefault) event.preventDefault();
-  const selectedView = event?.currentTarget?.dataset?.linkView || state.settings.display.linkView || 'grid';
-  const perPage = $('[name="linksPerPageToolbar"]')?.value || state.settings.display.linksPerPage || 6;
+  const selectedView = event?.currentTarget?.dataset?.linkView || linkView(state.settings.display);
+  const selectedGrid = $('[name="gridPresetToolbar"]')?.value || gridPreset(state.settings.display);
+  const listPerPage = clampInt($('[name="listPerPageToolbar"]')?.value ?? state.settings.display.listPerPage, 1, 12, 6);
   const settings = {
     ...state.settings,
-    display: {
-      linksPerPage: perPage,
+    display: displaySettings({
       linkView: selectedView,
-      searchEngine: state.settings.display.searchEngine,
-      theme: getStoredTheme(),
-      mode: getStoredMode()
-    }
+      gridPreset: selectedGrid,
+      listPerPage
+    })
   };
   const result = await api('/api/admin/settings', { method: 'PUT', body: settings });
   state.settings = result.settings;
@@ -604,13 +669,10 @@ function bindAppearanceControls(rerender) {
 async function saveAppearanceSettings() {
   const settings = {
     ...state.settings,
-    display: {
-      linksPerPage: state.settings.display.linksPerPage,
-      linkView: state.settings.display.linkView || 'grid',
-      searchEngine: state.settings.display.searchEngine,
+    display: displaySettings({
       theme: getStoredTheme(),
       mode: getStoredMode()
-    }
+    })
   };
   const result = await api('/api/admin/settings', { method: 'PUT', body: settings });
   state.settings = result.settings;
