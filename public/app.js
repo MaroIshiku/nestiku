@@ -26,6 +26,7 @@ const GRID_PRESETS = {
   '3x3': { columns: 3, rows: 3, count: 9, label: '3x3' },
   '3x4': { columns: 3, rows: 4, count: 12, label: '3x4' }
 };
+const LAST_LOGIN_KEY = 'nestiku-last-login';
 
 boot();
 
@@ -176,6 +177,7 @@ async function submitSetup(event) {
   if (body.password !== body.passwordConfirm) return toast('Passwords do not match.', 'error');
   if ((body.password || '').length < 12) return toast('Password is too short.', 'error');
   await api('/api/setup/register', { method: 'POST', body });
+  rememberLoginName(body.username);
   toast('Admin account created.');
   await loadBootstrap();
   await loadAppData();
@@ -183,6 +185,7 @@ async function submitSetup(event) {
 }
 
 function renderLogin() {
+  const lastLogin = localStorage.getItem(LAST_LOGIN_KEY) || '';
   app().innerHTML = `
     <main class="auth-screen">
       <section class="card auth-window" aria-labelledby="login-title">
@@ -194,7 +197,7 @@ function renderLogin() {
           </div>
         </div>
         <form class="form" id="login-form">
-          ${field('Username', 'username', 'text', 'username')}
+          ${field('Username or email', 'username', 'text', 'username', true, lastLogin)}
           ${field('Password', 'password', 'password', 'current-password')}
           <button class="button filled full" type="submit">Sign in</button>
         </form>
@@ -213,6 +216,7 @@ async function submitLogin(event) {
   submit.disabled = true;
   try {
     await api('/api/login', { method: 'POST', body });
+    rememberLoginName(body.username);
     await loadBootstrap();
     await loadAppData();
     renderStart();
@@ -463,6 +467,7 @@ function accountPanel() {
       ${field('Display name', 'displayName', 'text', 'name', true, state.user.displayName || '')}
       ${field('Email optional', 'email', 'email', 'email', false, state.user.email || '')}
       ${field('Username', 'username', 'text', 'username', true, state.user.username || '')}
+      <input type="hidden" name="changePassword" value="false">
       <div class="form-row">
         ${field('New password', 'password', 'password', 'new-password', false)}
         ${field('Repeat password', 'passwordConfirm', 'password', 'new-password', false)}
@@ -480,6 +485,14 @@ function bindAdmin() {
   }));
   $('#settings-form')?.addEventListener('submit', saveSettings);
   $('#account-form')?.addEventListener('submit', saveAccount);
+  $$('[name="password"], [name="passwordConfirm"]', $('#account-form') || document).forEach((input) => {
+    input.addEventListener('input', (event) => {
+      if (!event.isTrusted) return;
+      const form = event.currentTarget.form;
+      const marker = $('[name="changePassword"]', form);
+      if (marker) marker.value = 'true';
+    });
+  });
   $('[name="locationSearch"]')?.addEventListener('input', debounce(geocode, 350));
 }
 
@@ -637,11 +650,19 @@ async function saveAccount(event) {
   event.preventDefault();
   const body = Object.fromEntries(new FormData(event.currentTarget).entries());
   if (!body.currentPassword) return toast('Current password is required.', 'error');
-  if (body.password !== body.passwordConfirm) return toast('New passwords do not match.', 'error');
-  await api('/api/admin/credentials', { method: 'PUT', body });
+  const changePassword = body.changePassword === 'true' && (body.password || body.passwordConfirm);
+  body.changePassword = changePassword;
+  if (changePassword && body.password !== body.passwordConfirm) return toast('New passwords do not match.', 'error');
+  const result = await api('/api/admin/credentials', { method: 'PUT', body });
+  rememberLoginName(result.username || body.username);
   toast('Account saved.');
   await loadAppData();
   renderAdmin();
+}
+
+function rememberLoginName(value) {
+  const login = String(value || '').trim();
+  if (login) localStorage.setItem(LAST_LOGIN_KEY, login);
 }
 
 async function geocode(event) {

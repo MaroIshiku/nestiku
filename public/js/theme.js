@@ -15,7 +15,12 @@ export function applyTheme(theme, mode, persist = true) {
   document.documentElement.dataset.mode = mode;
   document.documentElement.dataset.resolvedMode = resolved;
   document.documentElement.style.colorScheme = resolved;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#141218' : '#f9f6ff');
+  requestAnimationFrame(() => {
+    const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--color-background').trim()
+      || getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+      || (resolved === 'dark' ? '#15121A' : '#FFFBFF');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
+  });
   if (persist) {
     localStorage.setItem('nestiku-theme', theme);
     localStorage.setItem('nestiku-mode', mode);

@@ -253,7 +253,9 @@ app.put('/api/admin/credentials', requireAuth, async (req, res) => {
       auth.email = email;
       changed = true;
     }
-    if (password) {
+    const wantsPasswordChange = body.changePassword === true || body.changePassword === 'true' || body.changePassword === '1';
+    if (wantsPasswordChange) {
+      if (!password || !passwordConfirm) throw new Error('New password and confirmation are required.');
       validatePassword({ password, passwordConfirm, username: auth.username, setupSecret: '' });
       auth.passwordHash = await hashPassword(password);
       changed = true;
