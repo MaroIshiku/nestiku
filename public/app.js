@@ -553,11 +553,30 @@ async function saveDisplayFromToolbar(event) {
 }
 
 async function saveLinks() {
+  syncLinkEditorDraft();
   const result = await api('/api/admin/links', { method: 'PUT', body: { links: state.links } });
   state.links = result.links;
+  state.editingLinks = false;
   state.editingLink = -1;
   toast('Links saved.');
   renderStart();
+}
+
+function syncLinkEditorDraft() {
+  const editor = $('[data-editor]');
+  if (!editor || state.editingLink < 0 || !state.links[state.editingLink]) return;
+  const title = $('[name="title"]', editor)?.value?.trim();
+  const url = $('[name="url"]', editor)?.value?.trim();
+  const iconValue = $('[name="icon"]', editor)?.value?.trim();
+  const selected = $('.color-dot.selected', editor);
+  if (!title && !url && !iconValue) return;
+  state.links[state.editingLink] = {
+    ...state.links[state.editingLink],
+    title: title || state.links[state.editingLink].title || 'New link',
+    url: url || state.links[state.editingLink].url || '#',
+    icon: iconValue || state.links[state.editingLink].icon || initials(title || state.links[state.editingLink].title),
+    color: selected ? Number(selected.dataset.color) : safeColor(state.links[state.editingLink].color)
+  };
 }
 
 async function applyLinkEditor() {
@@ -648,6 +667,10 @@ function bindGlobalActions() {
     renderStart();
   }));
   $$('[data-action="links-edit"]').forEach((el) => el.addEventListener('click', () => {
+    if (state.editingLinks) {
+      saveLinks();
+      return;
+    }
     state.editingLinks = !state.editingLinks;
     state.editingLink = -1;
     renderStart();
