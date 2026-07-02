@@ -19,6 +19,7 @@ Nestiku is a small, secure startpage with search, weather, bookmarks, first-run 
 ## Quick Start
 
 ```bash
+mkdir -p /DATA/AppData/nestiku/data
 cp .env.example .env
 ```
 
@@ -42,7 +43,7 @@ The Compose file is designed for self-hosting and appliance setups:
 
 - image: `ghcr.io/maroishiku/nestiku:latest`
 - long-syntax port mapping `8503 -> 8080`
-- persistent bind mount `/DATA/AppData/ish_nestiku/data -> /data`
+- persistent bind mount `/DATA/AppData/nestiku/data -> /data`
 - installer-compatible `SESSION_SECRET` and `ISHIKU_SETUP_SECRET` environment variables
 - automatic persistent session secret at `/data/session_secret` if `SESSION_SECRET` is empty
 - read-only container with `tmpfs` for `/tmp`
@@ -102,8 +103,8 @@ Nestiku stores all mutable data below `/data`:
 On Linux hosts, you may need to grant write access to the runtime user:
 
 ```bash
-sudo mkdir -p /DATA/AppData/ish_nestiku/data
-sudo chown -R 10001:10001 /DATA/AppData/ish_nestiku/data
+sudo mkdir -p /DATA/AppData/nestiku/data
+sudo chown -R 10001:10001 /DATA/AppData/nestiku/data
 ```
 
 ## Local Development

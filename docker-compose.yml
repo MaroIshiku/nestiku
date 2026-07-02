@@ -1,7 +1,7 @@
-name: nestiku-startpage
+name: nestiku
 
 services:
-  Nestiku:
+  nestiku:
     cap_drop:
       - ALL
     cap_add:
@@ -11,7 +11,7 @@ services:
     cpus: 0.5
     cpu_shares: 90
     command: []
-    container_name: Nestiku
+    container_name: nestiku
     deploy:
       resources:
         limits:
@@ -32,7 +32,7 @@ services:
       - PORT=8080
       - SESSION_SECRET=${SESSION_SECRET:-}
       - TZ=Europe/Berlin
-    hostname: Nestiku
+    hostname: nestiku
     healthcheck:
       test:
         - CMD
@@ -76,16 +76,16 @@ services:
       - /tmp:size=32m,mode=1777
     volumes:
       - type: bind
-        source: /DATA/AppData/ish_nestiku/data
+        source: /DATA/AppData/nestiku/data
         target: /data
     devices: []
     networks:
-      - Nestiku
+      - nestiku
     privileged: false
 
 networks:
-  Nestiku:
-    name: Nestiku
+  nestiku:
+    name: nestiku
     driver: bridge
 
 x-casaos:
@@ -102,10 +102,10 @@ x-casaos:
   icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
   index: /
   is_uncontrolled: false
-  main: Nestiku
+  main: nestiku
   port_map: "8503"
   scheme: http
-  store_app_id: Nestiku
+  store_app_id: nestiku
   tagline:
     de_de: Your calm, private and secure personal startpage.
     en_us: Your calm, private and secure personal startpage.
@@ -120,7 +120,7 @@ x-casaos:
 
 
         Persistent data is stored on the ZimaOS host under
-        /DATA/AppData/ish_nestiku/data and is
+        /DATA/AppData/nestiku/data and is
         mounted into the container at /data. The container runs read-only,
         without privileges and as UID/GID 10001.
 
@@ -135,7 +135,7 @@ x-casaos:
 
 
         Persistent data is stored on the ZimaOS host under
-        /DATA/AppData/ish_nestiku/data and is
+        /DATA/AppData/nestiku/data and is
         mounted into the container at /data. The container runs read-only,
         without privileges and as UID/GID 10001.
 
