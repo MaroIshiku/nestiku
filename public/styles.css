@@ -80,7 +80,10 @@ html[data-resolved-mode="dark"] { color-scheme: dark; }
 body {
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 18%, var(--bg)) 0%, var(--bg) 36%) fixed;
+  background:
+    radial-gradient(circle at 12% -10%, color-mix(in srgb, var(--primary-soft) 55%, transparent), transparent 30rem),
+    radial-gradient(circle at 95% 8%, color-mix(in srgb, var(--tertiary-soft) 38%, transparent), transparent 26rem),
+    var(--bg);
 }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -353,6 +356,8 @@ img, svg { display: block; max-width: 100%; }
 .sheet-back { min-width: 44px; padding: 0 var(--space-2); }
 .sheet-back svg { width: 20px; height: 20px; }
 .account-card { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-card); background: var(--soft); margin-bottom: var(--space-4); }
+.account-card.profile-card-button { width: 100%; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.account-card.profile-card-button:hover { background: var(--primary-soft); color: var(--on-primary-soft); }
 .account-avatar { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: var(--on-primary); font-size: 24px; font-weight: 900; }
 .list { display: grid; gap: var(--space-2); }
 .list-row { min-height: 58px; width: 100%; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text); display: grid; grid-template-columns: 28px 1fr auto; gap: var(--space-3); align-items: center; text-align: left; padding: var(--space-3); text-decoration: none; }

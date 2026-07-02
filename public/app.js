@@ -683,10 +683,10 @@ async function saveAppearanceSettings() {
 function openProfileSheet() {
   openSheet(`
     ${sheetHeader('Profile')}
-    <div class="account-card"><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div></div>
+    <button class="account-card profile-card-button" type="button" data-sheet-admin><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div></button>
     <div class="list">
-      <button class="list-row" data-sheet-admin>${icon('settings')}<span><strong>Settings</strong><span class="support">Manage profile, search and account</span></span><span></span></button>
       <button class="list-row" data-sheet-appearance>${icon('palette')}<span><strong>Appearance</strong><span class="support">Theme and color mode</span></span><span></span></button>
+      <button class="list-row" data-sheet-admin>${icon('settings')}<span><strong>Admin</strong><span class="support">Profile, search, weather and account</span></span><span></span></button>
       <button class="list-row" data-sheet-about>${icon('info')}<span><strong>About</strong><span class="support">Version, paths and health endpoints</span></span><span></span></button>
       <button class="list-row" data-logout>${icon('logout')}<span><strong>Log out</strong><span class="support">End this session</span></span><span></span></button>
     </div>

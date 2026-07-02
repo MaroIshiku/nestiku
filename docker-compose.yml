@@ -22,6 +22,7 @@ services:
           devices: []
     environment:
       - HOST=0.0.0.0
+      - NESTIKU_BIND_ADDRESS=0.0.0.0
       - ISHIKU_DATA_DIR=/data
       - ISHIKU_LOG_LEVEL=info
       - ISHIKU_SETUP_SECRET=${ISHIKU_SETUP_SECRET:-}

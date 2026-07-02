@@ -63,7 +63,7 @@ const MODES = ['system', 'light', 'dark'];
 const PLACEHOLDER_PASSWORDS = new Set(['admin', 'password', 'passwort', 'changeme', 'change-me', '123456', '123456789', 'ishiku', 'nestiku']);
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = resolveListenHost(process.env.NESTIKU_BIND_ADDRESS || process.env.LISTEN_HOST || process.env.BIND_ADDRESS || process.env.HOST || '0.0.0.0');
 const DATA_DIR = process.env.NESTIKU_DATA_DIR || process.env.ISHIKU_DATA_DIR || process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const ICON_DIR = path.join(DATA_DIR, 'icons');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -502,6 +502,15 @@ function validateLinks(input) {
 
 function clean(value, max = 100) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function resolveListenHost(value) {
+  const host = clean(value, 120) || '0.0.0.0';
+  if (net.isIPv4(host) && host !== '0.0.0.0' && host !== '127.0.0.1') {
+    console.warn(`Ignoring non-container bind address ${host}; listening on 0.0.0.0 instead.`);
+    return '0.0.0.0';
+  }
+  return host;
 }
 
 function parseHttpUrl(raw, label = 'URL') {
