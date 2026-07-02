@@ -80,7 +80,7 @@ html[data-resolved-mode="dark"] { color-scheme: dark; }
 body {
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 24%, var(--bg)) 0%, var(--bg) 42%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 18%, var(--bg)) 0%, var(--bg) 36%) fixed;
 }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
@@ -100,12 +100,18 @@ img, svg { display: block; max-width: 100%; }
   border-bottom: 1px solid var(--line);
 }
 .topbar-inner {
-  min-height: var(--app-header-desktop-min-height);
+  min-height: var(--app-header-mobile-min-height);
   width: min(100%, 1180px);
   margin: 0 auto;
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+@media (min-width: 760px) {
+  .topbar-inner {
+    min-height: var(--app-header-desktop-min-height);
+  }
 }
 .logo-box, .logo-large {
   display: grid;
