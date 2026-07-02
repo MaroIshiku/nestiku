@@ -171,7 +171,7 @@ app.post('/api/login', async (req, res) => {
     await delay(350);
     return res.status(401).json({ error: 'Falsche Anmeldedaten.' });
   }
-  const ok = username === auth.username && await verifyPassword(password, auth.passwordHash);
+  const ok = adminLoginNameMatches(auth, username) && await verifyPassword(password, auth.passwordHash);
   if (!ok) {
     await delay(350);
     return res.status(401).json({ error: 'Falsche Anmeldedaten.' });
@@ -378,6 +378,14 @@ async function ensureAuthState() {
 
 function hasAdmin(auth) {
   return !!(auth && auth.username && auth.passwordHash);
+}
+
+function adminLoginNameMatches(auth, value) {
+  const login = clean(value, 160).toLowerCase();
+  if (!login) return false;
+  return [auth.username, auth.displayName, auth.email]
+    .filter(Boolean)
+    .some((candidate) => clean(candidate, 160).toLowerCase() === login);
 }
 
 function isSetupRequired(auth) {

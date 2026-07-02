@@ -207,11 +207,20 @@ function renderLogin() {
 
 async function submitLogin(event) {
   event.preventDefault();
-  const body = Object.fromEntries(new FormData(event.currentTarget).entries());
-  await api('/api/login', { method: 'POST', body });
-  await loadBootstrap();
-  await loadAppData();
-  renderStart();
+  const form = event.currentTarget;
+  const submit = form.querySelector('button[type="submit"]');
+  const body = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  try {
+    await api('/api/login', { method: 'POST', body });
+    await loadBootstrap();
+    await loadAppData();
+    renderStart();
+  } catch (error) {
+    toast(error.message || 'Sign in failed.', 'error');
+  } finally {
+    submit.disabled = false;
+  }
 }
 
 function renderStart() {
