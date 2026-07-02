@@ -1,6 +1,7 @@
 export async function api(url, options = {}) {
   const response = await fetch(url, {
     method: options.method || 'GET',
+    credentials: 'same-origin',
     headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
     body: options.body ? JSON.stringify(options.body) : undefined
   });

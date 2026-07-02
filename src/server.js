@@ -441,8 +441,20 @@ function setSessionCookie(req, res, username) {
 }
 
 function cookieOptions(req) {
-  const secure = req.secure || (req.get('x-forwarded-proto') || '').split(',')[0].trim() === 'https';
-  return { httpOnly: true, sameSite: 'strict', secure, path: '/' };
+  const sameSite = normalizeSameSite(process.env.NESTIKU_COOKIE_SAMESITE || process.env.COOKIE_SAMESITE || 'lax');
+  const secure = parseBoolean(process.env.NESTIKU_COOKIE_SECURE || process.env.COOKIE_SECURE);
+  return { httpOnly: true, sameSite, secure, path: '/' };
+}
+
+function normalizeSameSite(value) {
+  const normalized = clean(value, 16).toLowerCase();
+  if (['strict', 'lax', 'none'].includes(normalized)) return normalized;
+  return 'lax';
+}
+
+function parseBoolean(value) {
+  const normalized = clean(value, 16).toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
 }
 
 function publicUser(auth, settings) {

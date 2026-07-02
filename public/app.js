@@ -1,4 +1,4 @@
-import { api } from './js/api.js?v=20260701d';
+import { api } from './js/api.js?v=20260703a';
 import {
   $,
   $$,
@@ -217,7 +217,7 @@ async function submitLogin(event) {
   try {
     await api('/api/login', { method: 'POST', body });
     rememberLoginName(body.username);
-    await loadBootstrap();
+    state.authenticated = true;
     await loadAppData();
     renderStart();
   } catch (error) {
