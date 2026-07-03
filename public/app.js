@@ -197,7 +197,7 @@ function renderLogin() {
           </div>
         </div>
         <form class="form" id="login-form">
-          ${field('Username or email', 'username', 'text', 'username', true, lastLogin)}
+          ${field('Username', 'username', 'text', 'username', true, lastLogin)}
           ${field('Password', 'password', 'password', 'current-password')}
           <button class="button filled full" type="submit">Sign in</button>
         </form>
