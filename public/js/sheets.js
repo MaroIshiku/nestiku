@@ -22,8 +22,8 @@ export function openSheet(html, { onBack = null } = {}) {
   closeSheet();
   currentBackHandler = onBack;
   const node = document.createElement('div');
-  node.className = 'sheet-backdrop';
-  node.innerHTML = `<section class="sheet" role="dialog" aria-modal="true">${html}</section>`;
+  node.className = 'psu-backdrop';
+  node.innerHTML = `<section class="psu-sheet nestiku-sheet" role="dialog" aria-modal="true">${html}</section>`;
   document.body.append(node);
   node.addEventListener('click', handleSheetClick);
   node.addEventListener('pointerdown', handleSheetCommand, true);
@@ -32,7 +32,7 @@ export function openSheet(html, { onBack = null } = {}) {
 }
 
 export function closeSheet() {
-  $$('.sheet-backdrop').forEach((node) => {
+  $$('.psu-backdrop').forEach((node) => {
     node.removeEventListener('click', handleSheetClick);
     node.removeEventListener('pointerdown', handleSheetCommand, true);
     node.remove();

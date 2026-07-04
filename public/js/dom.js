@@ -55,11 +55,11 @@ export function debounce(fn, ms) {
 }
 
 export function toast(message, type = '') {
-  const node = $('#toast');
+  const node = $('#psu-toast-host');
   node.textContent = message;
-  node.className = `toast show ${type}`;
+  node.className = `psu-toast-host show ${type}`;
   clearTimeout(node.timer);
-  node.timer = setTimeout(() => { node.className = 'toast'; }, 3200);
+  node.timer = setTimeout(() => { node.className = 'psu-toast-host'; }, 3200);
 }
 
 export function field(label, name, type = 'text', autocomplete = 'off', required = true, value = '', placeholder = '') {

@@ -199,7 +199,9 @@ function renderLogin() {
         <form class="form" id="login-form">
           ${field('Username', 'username', 'text', 'username', true, lastLogin)}
           ${field('Password', 'password', 'password', 'current-password')}
-          <button class="button filled full" type="submit">Sign in</button>
+          <div class="setup-actions">
+            <button class="button filled full" type="submit">Sign in</button>
+          </div>
         </form>
       </section>
     </main>
@@ -710,12 +712,12 @@ function bindGlobalActions() {
 }
 
 function bindAppearanceControls(rerender) {
-  $$('[data-theme]').forEach((button) => button.addEventListener('click', () => {
-    applyTheme(button.dataset.theme, getStoredMode());
+  $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => {
+    applyTheme(button.dataset.themeChoice, getStoredMode());
     saveAppearanceSettings().then(rerender);
   }));
-  $$('[data-mode]').forEach((button) => button.addEventListener('click', () => {
-    applyTheme(getStoredTheme(), button.dataset.mode);
+  $$('[data-mode-choice]').forEach((button) => button.addEventListener('click', () => {
+    applyTheme(getStoredTheme(), button.dataset.modeChoice);
     saveAppearanceSettings().then(rerender);
   }));
 }
@@ -736,19 +738,84 @@ async function saveAppearanceSettings() {
 function openProfileSheet() {
   openSheet(`
     ${sheetHeader('Profile')}
-    <button class="account-card profile-card-button" type="button" data-sheet-admin><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div></button>
-    <div class="list">
-      <button class="list-row" data-sheet-appearance>${icon('palette')}<span><strong>Appearance</strong><span class="support">Theme and color mode</span></span><span></span></button>
-      <button class="list-row" data-sheet-admin>${icon('settings')}<span><strong>Admin</strong><span class="support">Profile, search, weather and account</span></span><span></span></button>
-      <button class="list-row" data-sheet-about>${icon('info')}<span><strong>About</strong><span class="support">Version, paths and health endpoints</span></span><span></span></button>
-      <button class="list-row" data-logout>${icon('logout')}<span><strong>Log out</strong><span class="support">End this session</span></span><span></span></button>
+    <button class="account-card profile-card-button" type="button" data-sheet-account><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div><span class="support">›</span></button>
+    <div class="profile-accordion">
+      ${profileSection('appearance', 'Appearance', 'Theme and color mode', appearanceSheetBody(), true)}
+      ${profileSection('admin', 'Settings', 'Profile, search, weather and links', `<button class="button tonal full" type="button" data-sheet-admin>Open full settings</button>`, false)}
+      ${profileSection('about', 'About', 'Version, paths and health endpoints', aboutSheetBody(), false)}
+      <button class="profile-signout-button" type="button" data-logout>${icon('logout')}<span>Log out</span></button>
     </div>
   `);
   bindSheetChrome();
+  $('[data-sheet-account]').addEventListener('click', openAccountSheet);
   $('[data-sheet-admin]').addEventListener('click', () => { closeSheet(); renderAdmin(); });
-  $('[data-sheet-appearance]').addEventListener('click', openAppearanceSheet);
-  $('[data-sheet-about]').addEventListener('click', openAboutSheet);
+  bindProfileAccordion();
+  bindAppearanceControls(openProfileSheet);
   $('[data-logout]').addEventListener('click', logout);
+}
+
+function profileSection(id, title, support, body, open = false) {
+  return `
+    <section class="profile-section" data-menu-section="${id}">
+      <button class="profile-section-trigger" type="button" data-menu-trigger="${id}" aria-expanded="${open}">
+        <span><strong>${title}</strong><span class="support">${support}</span></span>
+        <span aria-hidden="true">⌄</span>
+      </button>
+      <div class="profile-section-panel" data-menu-panel="${id}" ${open ? '' : 'hidden'}>${body}</div>
+    </section>`;
+}
+
+function bindProfileAccordion() {
+  $$('[data-menu-trigger]').forEach((button) => button.addEventListener('click', () => {
+    const id = button.dataset.menuTrigger;
+    const shouldOpen = button.getAttribute('aria-expanded') !== 'true';
+    $$('[data-menu-section]').forEach((section) => {
+      const open = shouldOpen && section.dataset.menuSection === id;
+      section.querySelector('[data-menu-trigger]')?.setAttribute('aria-expanded', String(open));
+      const panel = section.querySelector('[data-menu-panel]');
+      if (panel) panel.hidden = !open;
+    });
+  }));
+}
+
+function appearanceSheetBody() {
+  return `
+    <div class="theme-grid" data-theme-picker>
+      ${state.themes.map((theme) => `<button class="theme-choice ${theme === getStoredTheme() ? 'selected' : ''}" type="button" data-theme-choice="${theme}"><span class="theme-swatch theme-${theme}"></span><strong>${THEME_LABELS[theme] || theme}</strong></button>`).join('')}
+    </div>
+    <div class="segmented" data-mode-picker>${state.modes.map((mode) => `<button type="button" data-mode-choice="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>`;
+}
+
+function aboutSheetBody() {
+  return `<div class="technical-card">Internal port: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data path: /data<br>Image: ghcr.io/maroishiku/nestiku</div>`;
+}
+
+function openAccountSheet() {
+  openSheet(`
+    ${sheetHeader('Account', { back: true })}
+    <form class="form" id="account-form">
+      ${field('Current password', 'currentPassword', 'password', 'current-password')}
+      ${field('Display name', 'displayName', 'text', 'name', true, state.user.displayName || '')}
+      ${field('Email optional', 'email', 'email', 'email', false, state.user.email || '')}
+      ${field('Username', 'username', 'text', 'username', true, state.user.username || '')}
+      <input type="hidden" name="changePassword" value="false">
+      <div class="form-row">
+        ${field('New password', 'password', 'password', 'new-password', false)}
+        ${field('Repeat password', 'passwordConfirm', 'password', 'new-password', false)}
+      </div>
+      <div class="tonal-card card-text">Leave the password fields empty if you only want to update profile details.</div>
+      <div class="actions"><button class="button filled" type="submit">Save account</button></div>
+    </form>
+  `);
+  bindSheetChrome({ onBack: openProfileSheet });
+  $('#account-form')?.addEventListener('submit', saveAccount);
+  $$('[name="password"], [name="passwordConfirm"]', $('#account-form') || document).forEach((input) => {
+    input.addEventListener('input', (event) => {
+      if (!event.isTrusted) return;
+      const marker = $('[name="changePassword"]', event.currentTarget.form);
+      if (marker) marker.value = 'true';
+    });
+  });
 }
 
 function openInfoSheet() {
@@ -769,13 +836,13 @@ function openAppearanceSheet() {
     ${sheetHeader('Appearance')}
     <div class="settings-group">
       <h3>Theme</h3>
-      <div class="theme-grid">
-        ${state.themes.map((theme) => `<button class="theme-choice ${theme === getStoredTheme() ? 'selected' : ''}" type="button" data-theme="${theme}"><span class="theme-swatch theme-${theme}"></span><strong>${THEME_LABELS[theme] || theme}</strong></button>`).join('')}
+      <div class="theme-grid" data-theme-picker>
+        ${state.themes.map((theme) => `<button class="theme-choice ${theme === getStoredTheme() ? 'selected' : ''}" type="button" data-theme-choice="${theme}"><span class="theme-swatch theme-${theme}"></span><strong>${THEME_LABELS[theme] || theme}</strong></button>`).join('')}
       </div>
     </div>
     <div class="settings-group">
       <h3>Mode</h3>
-      <div class="segmented">${state.modes.map((mode) => `<button type="button" data-mode="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>
+      <div class="segmented" data-mode-picker>${state.modes.map((mode) => `<button type="button" data-mode-choice="${mode}" aria-selected="${mode === getStoredMode()}">${MODE_LABELS[mode] || mode}</button>`).join('')}</div>
     </div>
   `);
   bindSheetChrome();
