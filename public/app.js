@@ -149,8 +149,8 @@ function renderSetup() {
         <div class="brand">
           <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
           <div>
-            <h1 id="setup-title">Create admin account</h1>
-            <p>Create the first administrator for Nestiku.</p>
+            <h1 id="setup-title">Set up admin</h1>
+            <p>Create the first administrator account for Nestiku.</p>
           </div>
         </div>
         ${error}
@@ -158,7 +158,7 @@ function renderSetup() {
           ${field('Setup secret', 'setupSecret', 'password', 'one-time-code')}
           ${field('Display name', 'displayName', 'text', 'name')}
           ${field('Admin username', 'username', 'text', 'username')}
-          ${field('Email optional', 'email', 'email', 'email', false)}
+          ${field('Email (optional)', 'email', 'email', 'email', false)}
           ${field('Admin password', 'password', 'password', 'new-password')}
           ${field('Repeat password', 'passwordConfirm', 'password', 'new-password')}
           <div class="tonal-card card-text">Use at least 12 characters. Do not reuse the setup secret, username or app name.</div>
@@ -467,7 +467,7 @@ function accountPanel() {
     <form class="form" id="account-form">
       ${field('Current password', 'currentPassword', 'password', 'current-password')}
       ${field('Display name', 'displayName', 'text', 'name', true, state.user.displayName || '')}
-      ${field('Email optional', 'email', 'email', 'email', false, state.user.email || '')}
+      ${field('Email (optional)', 'email', 'email', 'email', false, state.user.email || '')}
       ${field('Username', 'username', 'text', 'username', true, state.user.username || '')}
       <input type="hidden" name="changePassword" value="false">
       <div class="form-row">
@@ -796,7 +796,7 @@ function openAccountSheet() {
     <form class="form" id="account-form">
       ${field('Current password', 'currentPassword', 'password', 'current-password')}
       ${field('Display name', 'displayName', 'text', 'name', true, state.user.displayName || '')}
-      ${field('Email optional', 'email', 'email', 'email', false, state.user.email || '')}
+      ${field('Email (optional)', 'email', 'email', 'email', false, state.user.email || '')}
       ${field('Username', 'username', 'text', 'username', true, state.user.username || '')}
       <input type="hidden" name="changePassword" value="false">
       <div class="form-row">
