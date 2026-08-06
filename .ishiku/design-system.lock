@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "id": "ishiku-design-5",
+    "version": "5.0.0",
+    "sha256": "46628d1b69e5c27c3a339a31afbb7c3bed8d148b2fb0916c975407d86e9a1516"
+  },
+  "application": {
+    "id": "nestiku",
+    "authentication": "standard-account",
+    "locale": "en"
+  },
+  "implementation": [
+    {
+      "path": "public/design-system/tokens.css",
+      "sha256": "baa3a0b362f59dcfc365240a3fd3f5697cbcdb2546319037f3faccec01f9d1a3",
+      "roles": [
+        "components",
+        "tokens"
+      ]
+    },
+    {
+      "path": "public/js/theme.js",
+      "sha256": "24bf6f902e7ef2dbcc43369d6c1a0356b6c316a7c2d061654459ae5e453e89cc",
+      "roles": [
+        "theme-controller"
+      ]
+    },
+    {
+      "path": "public/styles.css",
+      "sha256": "eb02133b820d072a089e031b99510d7070b48d99745331d0df9ad70faab4f2f6",
+      "roles": [
+        "components"
+      ]
+    }
+  ]
+}
