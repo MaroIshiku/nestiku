@@ -260,7 +260,7 @@ app.put('/api/admin/credentials', requireAuth, async (req, res) => {
       auth.passwordHash = await hashPassword(password);
       changed = true;
     }
-    if (!changed) return res.status(400).json({ error: 'Keine Aenderung erkannt.' });
+    if (!changed) return res.status(400).json({ error: 'No change was detected.' });
     await authStore.write(auth);
     setSessionCookie(req, res, auth.username);
     res.json({ ok: true, username: auth.username });
