@@ -31,6 +31,9 @@ jobs:
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
       - name: Verify independently cloned app
         env:
           REQUIRE_ALL_VERIFIED: ${{ github.event_name == 'workflow_call' && inputs.require_all_verified }}

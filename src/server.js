@@ -10,13 +10,15 @@ const cookieParser = require('cookie-parser');
 
 const JsonStore = require('./storage');
 const {
+  SESSION_IDLE_AGE_MS,
   SESSION_MAX_AGE_MS,
-  createSession,
+  createSessionToken,
+  hashSessionToken,
   hashPassword,
+  needsPasswordRehash,
   setSessionSecret,
   timingSafeEqualString,
-  verifyPassword,
-  verifySession
+  verifyPassword
 } = require('./auth');
 
 const APP = {
@@ -71,14 +73,19 @@ const COOKIE_NAME = 'nestiku_session';
 const IS_PROD = process.env.NODE_ENV === 'production';
 const FETCH_TIMEOUT_MS = parseInt(process.env.EXTERNAL_FETCH_TIMEOUT_MS || '5000', 10);
 const ICON_MAX_BYTES = 1024 * 1024;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
+const SESSION_TOUCH_INTERVAL_MS = 60 * 1000;
 
 const authStore = new JsonStore(path.join(DATA_DIR, 'auth.json'), DEFAULT_AUTH);
 const linksStore = new JsonStore(path.join(DATA_DIR, 'links.json'), DEFAULT_LINKS);
 const settingsStore = new JsonStore(path.join(DATA_DIR, 'settings.json'), DEFAULT_SETTINGS);
+const sessionsStore = new JsonStore(path.join(DATA_DIR, 'sessions.json'), { sessions: [] });
+const loginAttempts = new Map();
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1);
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 app.use(express.json({ limit: '512kb' }));
 app.use(cookieParser());
 app.use(securityHeaders);
@@ -106,7 +113,7 @@ app.use(express.static(PUBLIC_DIR, {
 
 app.get('/api/bootstrap', async (req, res) => {
   const [auth, settings] = await Promise.all([ensureAuthState(), settingsStore.read()]);
-  const session = getSession(req);
+  const session = await getSession(req);
   const authenticated = !!session && session.user === auth.username && hasAdmin(auth);
   const setup = await getSetupState(auth);
   res.json({
@@ -114,6 +121,7 @@ app.get('/api/bootstrap', async (req, res) => {
     setup,
     authenticated,
     user: authenticated ? publicUser(auth, settings) : null,
+    csrfToken: authenticated ? session.csrf : null,
     searchEngines: SEARCH_ENGINES,
     themes: THEMES,
     modes: MODES
@@ -124,12 +132,17 @@ app.post('/api/setup/register', async (req, res) => {
   try {
     const auth = await ensureAuthState();
     if (!isSetupRequired(auth)) return res.status(409).json({ error: 'Setup is already complete.' });
+    const rateKey = `setup:${req.ip || req.socket.remoteAddress || '-'}`;
+    if (isLoginRateLimited(rateKey)) {
+      return res.status(429).json({ error: 'Setup is temporarily unavailable. Try again later.' });
+    }
 
     const setupSecret = await readSetupSecret();
     if (!setupSecret.configured) return res.status(503).json({ error: setupSecret.error });
 
     const body = req.body || {};
     if (!timingSafeEqualString(body.setupSecret, setupSecret.value)) {
+      recordFailedLogin(rateKey);
       await delay(350);
       return res.status(401).json({ error: 'Setup secret is incorrect.' });
     }
@@ -156,8 +169,9 @@ app.post('/api/setup/register', async (req, res) => {
     const settings = await settingsStore.read();
     settings.name = displayName;
     await settingsStore.write(validateSettings(settings));
-    setSessionCookie(req, res, username);
-    res.json({ ok: true });
+    loginAttempts.delete(rateKey);
+    const session = await setSessionCookie(req, res, username);
+    res.json({ ok: true, csrfToken: session.csrf });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -167,20 +181,32 @@ app.post('/api/login', async (req, res) => {
   const auth = await ensureAuthState();
   if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup required.' });
   const { username, password } = req.body || {};
+  const rateKey = loginRateKey(req, username);
+  if (isLoginRateLimited(rateKey)) {
+    return res.status(429).json({ error: 'Sign-in is temporarily unavailable. Try again later.' });
+  }
   if (typeof username !== 'string' || typeof password !== 'string') {
+    recordFailedLogin(rateKey);
     await delay(350);
-    return res.status(401).json({ error: 'Falsche Anmeldedaten.' });
+    return res.status(401).json({ error: 'Invalid username or password.' });
   }
   const ok = adminLoginNameMatches(auth, username) && await verifyPassword(password, auth.passwordHash);
   if (!ok) {
+    recordFailedLogin(rateKey);
     await delay(350);
-    return res.status(401).json({ error: 'Falsche Anmeldedaten.' });
+    return res.status(401).json({ error: 'Invalid username or password.' });
   }
-  setSessionCookie(req, res, auth.username);
-  res.json({ ok: true });
+  loginAttempts.delete(rateKey);
+  if (needsPasswordRehash(auth.passwordHash)) {
+    auth.passwordHash = await hashPassword(password);
+    await authStore.write(auth);
+  }
+  const session = await setSessionCookie(req, res, auth.username);
+  res.json({ ok: true, csrfToken: session.csrf });
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', requireAuth, requireCsrf, async (req, res) => {
+  await revokeSession(req);
   res.clearCookie(COOKIE_NAME, cookieOptions(req));
   res.json({ ok: true });
 });
@@ -198,7 +224,9 @@ app.get('/api/data', requireAuth, async (req, res) => {
   });
 });
 
-app.put('/api/admin/settings', requireAuth, async (req, res) => {
+app.use('/api/admin', requireAuth, requireCsrf);
+
+app.put('/api/admin/settings', async (req, res) => {
   try {
     const settings = validateSettings(req.body || {});
     await settingsStore.write(settings);
@@ -208,7 +236,7 @@ app.put('/api/admin/settings', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/links', requireAuth, async (req, res) => {
+app.put('/api/admin/links', async (req, res) => {
   try {
     const links = validateLinks(req.body && req.body.links);
     await linksStore.write({ links });
@@ -218,12 +246,12 @@ app.put('/api/admin/links', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/admin/credentials', requireAuth, async (req, res) => {
+app.get('/api/admin/credentials', async (req, res) => {
   const auth = await authStore.read();
   res.json({ username: auth.username, displayName: auth.displayName || '', email: auth.email || '' });
 });
 
-app.put('/api/admin/credentials', requireAuth, async (req, res) => {
+app.put('/api/admin/credentials', async (req, res) => {
   try {
     const auth = await authStore.read();
     const body = req.body || {};
@@ -262,14 +290,14 @@ app.put('/api/admin/credentials', requireAuth, async (req, res) => {
     }
     if (!changed) return res.status(400).json({ error: 'No change was detected.' });
     await authStore.write(auth);
-    setSessionCookie(req, res, auth.username);
-    res.json({ ok: true, username: auth.username });
+    const session = await setSessionCookie(req, res, auth.username);
+    res.json({ ok: true, username: auth.username, csrfToken: session.csrf });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-app.get('/api/admin/geocode', requireAuth, async (req, res) => {
+app.get('/api/admin/geocode', async (req, res) => {
   const q = clean(req.query.q, 80);
   if (!q) return res.status(400).json({ error: 'Search term is required.' });
   try {
@@ -293,7 +321,7 @@ app.get('/api/admin/geocode', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/admin/favicon', requireAuth, async (req, res) => {
+app.get('/api/admin/favicon', async (req, res) => {
   try {
     const result = await cacheFavicon(clean(req.query.url, 2048));
     if (!result.icon) return res.status(404).json(result);
@@ -358,11 +386,15 @@ function securityHeaders(req, res, next) {
     "connect-src 'self' https://api.open-meteo.com",
     "object-src 'none'",
     "base-uri 'self'",
-    "frame-ancestors 'none'"
+    "frame-ancestors 'none'",
+    "form-action 'self'"
   ].join('; '));
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 }
 
@@ -417,15 +449,11 @@ async function readSetupSecret() {
   return { configured: false, error: 'ISHIKU_SETUP_SECRET_FILE or ISHIKU_SETUP_SECRET is missing.' };
 }
 
-function getSession(req) {
-  return verifySession(req.cookies && req.cookies[COOKIE_NAME]);
-}
-
 async function requireAuth(req, res, next) {
   try {
     const auth = await ensureAuthState();
     if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup required.' });
-    const session = getSession(req);
+    const session = await getSession(req);
     if (session && session.user === auth.username) return next();
     return res.status(401).json({ error: 'Authentication required.' });
   } catch (error) {
@@ -433,16 +461,74 @@ async function requireAuth(req, res, next) {
   }
 }
 
-function setSessionCookie(req, res, username) {
-  res.cookie(COOKIE_NAME, createSession({ user: username }), {
+async function requireCsrf(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  try {
+    const session = await getSession(req, false);
+    const token = req.get('X-CSRF-Token');
+    if (session && timingSafeEqualString(token, session.csrf)) return next();
+    return res.status(403).json({ error: 'Request verification failed.' });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getSession(req, touch = true) {
+  const token = req.cookies && req.cookies[COOKIE_NAME];
+  if (!token || typeof token !== 'string') return null;
+  const id = hashSessionToken(token);
+  const now = Date.now();
+  const doc = await sessionsStore.read();
+  const sessions = Array.isArray(doc.sessions) ? doc.sessions : [];
+  const active = sessions.filter((item) => item && item.expiresAt > now && item.idleExpiresAt > now);
+  const session = active.find((item) => item.id === id) || null;
+  let changed = active.length !== sessions.length;
+  if (session && touch && now - session.lastSeenAt >= SESSION_TOUCH_INTERVAL_MS) {
+    session.lastSeenAt = now;
+    session.idleExpiresAt = Math.min(session.expiresAt, now + SESSION_IDLE_AGE_MS);
+    changed = true;
+  }
+  if (changed) await sessionsStore.write({ sessions: active });
+  return session;
+}
+
+async function revokeSession(req) {
+  const token = req.cookies && req.cookies[COOKIE_NAME];
+  if (!token || typeof token !== 'string') return;
+  const id = hashSessionToken(token);
+  const doc = await sessionsStore.read();
+  const sessions = (Array.isArray(doc.sessions) ? doc.sessions : []).filter((item) => item.id !== id);
+  await sessionsStore.write({ sessions });
+}
+
+async function setSessionCookie(req, res, username) {
+  await revokeSession(req);
+  const token = createSessionToken();
+  const now = Date.now();
+  const session = {
+    id: hashSessionToken(token),
+    user: username,
+    csrf: createSessionToken(),
+    createdAt: now,
+    lastSeenAt: now,
+    idleExpiresAt: now + SESSION_IDLE_AGE_MS,
+    expiresAt: now + SESSION_MAX_AGE_MS
+  };
+  const doc = await sessionsStore.read();
+  const sessions = (Array.isArray(doc.sessions) ? doc.sessions : [])
+    .filter((item) => item && item.expiresAt > now && item.idleExpiresAt > now && item.user !== username);
+  sessions.push(session);
+  await sessionsStore.write({ sessions });
+  res.cookie(COOKIE_NAME, token, {
     ...cookieOptions(req),
     maxAge: SESSION_MAX_AGE_MS
   });
+  return session;
 }
 
 function cookieOptions(req) {
   const sameSite = normalizeSameSite(process.env.NESTIKU_COOKIE_SAMESITE || process.env.COOKIE_SAMESITE || 'lax');
-  const secure = parseBoolean(process.env.NESTIKU_COOKIE_SECURE || process.env.COOKIE_SECURE);
+  const secure = req.secure || sameSite === 'none' || parseBoolean(process.env.NESTIKU_COOKIE_SECURE || process.env.COOKIE_SECURE);
   return { httpOnly: true, sameSite, secure, path: '/' };
 }
 
@@ -455,6 +541,31 @@ function normalizeSameSite(value) {
 function parseBoolean(value) {
   const normalized = clean(value, 16).toLowerCase();
   return ['1', 'true', 'yes', 'on'].includes(normalized);
+}
+
+function loginRateKey(req, username) {
+  const account = clean(username, 160).toLowerCase() || '-';
+  return `${req.ip || req.socket.remoteAddress || '-'}:${account}`;
+}
+
+function isLoginRateLimited(key) {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now - entry.startedAt >= LOGIN_WINDOW_MS) {
+    loginAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function recordFailedLogin(key) {
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+  const entry = !current || now - current.startedAt >= LOGIN_WINDOW_MS
+    ? { count: 0, startedAt: now }
+    : current;
+  entry.count += 1;
+  loginAttempts.set(key, entry);
 }
 
 function publicUser(auth, settings) {

@@ -9,8 +9,11 @@
         "public/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/auth.test.js"
+        ],
         "integration": [
+          "tests/server-security.test.js",
           ".ishiku/kit/scripts/compliance-test"
         ],
         "e2e": [],
@@ -23,15 +26,22 @@
     {
       "id": "AUTH-001",
       "implementation": [
-        "See migration inventory and application source."
+        "src/auth.js",
+        "src/server.js",
+        "public/js/api.js"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/auth.test.js"
+        ],
         "integration": [
+          "tests/server-security.test.js",
           ".ishiku/kit/scripts/compliance-test"
         ],
         "e2e": [],
         "security": [
+          "tests/auth.test.js",
+          "tests/server-security.test.js",
           ".ishiku/kit/scripts/compliance-test"
         ]
       },
@@ -40,7 +50,11 @@
     {
       "id": "UI-001",
       "implementation": [
-        "See migration inventory and application source."
+        "assets/icon-source.png",
+        "public/assets/icons/",
+        "public/manifest.webmanifest",
+        "public/index.html",
+        "public/app.js"
       ],
       "tests": {
         "unit": [],
@@ -57,7 +71,10 @@
     {
       "id": "OPS-001",
       "implementation": [
-        "See migration inventory and application source."
+        "Dockerfile",
+        "docker-compose.yml",
+        ".env.example",
+        "README.md"
       ],
       "tests": {
         "unit": [],
@@ -77,6 +94,7 @@
       "implementation": [
         ".github/workflows/ishiku-pull-request-verify.yml",
         ".github/workflows/ishiku-release-release.yml",
+        ".github/workflows/publish-image.yml",
         ".ishiku/kit/scripts/check-release"
       ],
       "tests": {

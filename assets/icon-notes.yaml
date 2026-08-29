@@ -1,0 +1,23 @@
+schema_version: 1
+application: nestiku
+purpose: "Personal start page with search, weather, and bookmarks."
+category: "Private & Personal"
+tile_color: "#CDBDFF"
+accent_color: "#5B3FB4"
+symbol_rationale: "Home nested inside a browser window."
+generation_path: built-in-imagegen-approved-source
+native_source_dimensions: 1254x1254
+source_mode: RGBA
+export_method: direct-lanczos-downsample-no-crop-no-mask-change
+alpha_margin_left_px: 16
+alpha_margin_top_px: 18
+alpha_margin_right_px: 15
+alpha_margin_bottom_px: 19
+alpha_margin_max_ratio: 0.015152
+repository_integrated: true
+consumer_paths:
+  - public/index.html
+  - public/manifest.webmanifest
+  - public/app.js
+  - docker-compose.yml
+  - public/assets/nestiku.png

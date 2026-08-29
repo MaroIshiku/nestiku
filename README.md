@@ -32,17 +32,17 @@ docker compose up -d
 Open:
 
 ```text
-http://localhost:8503
+http://localhost:65004
 ```
 
-The container listens on port `8080` internally and publishes port `8503` on the host.
+The container listens on port `8080` internally and publishes the centrally assigned port `65004` on the host.
 
 ## Docker Compose
 
 The Compose file is designed for self-hosting and appliance setups:
 
-- image: `ghcr.io/maroishiku/nestiku:latest`
-- long-syntax port mapping `8503 -> 8080`
+- image: `ghcr.io/maroishiku/nestiku:2.1.0`
+- long-syntax port mapping `65004 -> 8080`
 - persistent bind mount `/DATA/AppData/nestiku/data -> /data`
 - installer-compatible `SESSION_SECRET` and `ISHIKU_SETUP_SECRET` environment variables
 - automatic persistent session secret at `/data/session_secret` if `SESSION_SECRET` is empty
@@ -77,8 +77,9 @@ The admin password must be at least 12 characters long and must not match the se
 - Docker Compose runs the container read-only, without Linux capabilities and with `no-new-privileges`
 - container runs as fixed UID/GID `10001` and only writes to `/data`
 - CPU, memory and PID limits are set
-- passwords are hashed with `scrypt`
-- session cookies are `HttpOnly`, `SameSite=Strict` and secure when served behind HTTPS
+- passwords are hashed with Argon2id (19 MiB, two iterations, parallelism one); legacy scrypt hashes are upgraded after a successful sign-in
+- sessions are server-side, revocable, idle-limited and absolute-expiring with CSRF protection
+- session cookies are `HttpOnly`, `SameSite=Lax` and secure when served behind HTTPS
 - Content Security Policy blocks third-party scripts and frames
 
 ## Health Endpoints
@@ -96,9 +97,12 @@ Nestiku stores all mutable data below `/data`:
 /data/auth.json
 /data/settings.json
 /data/links.json
+/data/sessions.json
 /data/icons/
 /data/session_secret
 ```
+
+Upgrading from a release before 2.1.0 signs out existing browser sessions once; application data and legacy password hashes remain compatible.
 
 On Linux hosts, you may need to grant write access to the runtime user:
 
@@ -129,6 +133,8 @@ ISHIKU_SETUP_SECRET=change-me-too
 ```bash
 docker build -t nestiku:local .
 ```
+
+Node.js 24 or newer is required for local development and verification.
 
 ## License
 

@@ -10,7 +10,6 @@ services:
       - SETUID
     cpus: 0.5
     cpu_shares: 90
-    command: []
     container_name: nestiku
     deploy:
       resources:
@@ -47,10 +46,10 @@ services:
       interval: 30s
       retries: 3
       start_period: 10s
-    image: ${NESTIKU_IMAGE:-ghcr.io/maroishiku/nestiku:0.1.0}
+    image: ghcr.io/maroishiku/nestiku:2.1.0
     init: true
     labels:
-      icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+      icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/icons/icon-512.png
       org.opencontainers.image.description: Private personal startpage with secure first-run setup, link dashboard, search, weather and local JSON storage.
       org.opencontainers.image.source: https://github.com/MaroIshiku/nestiku
       org.opencontainers.image.title: Nestiku - Personal Startpage
@@ -64,7 +63,7 @@ services:
     pids_limit: 128
     ports:
       - target: 8080
-        published: "8503"
+        published: "65004"
         protocol: tcp
     pull_policy: always
     read_only: true
@@ -100,17 +99,17 @@ x-casaos:
     en_us: Private personal startpage with secure first-run setup, bookmark dashboard, search, weather and local JSON storage.
   developer: MaroIshiku
   hostname: ""
-  icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+  icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/icons/icon-512.png
   index: /
   is_uncontrolled: false
   main: nestiku
-  port_map: "8503"
+  port_map: "65004"
   scheme: http
   store_app_id: nestiku
   tagline:
     de_de: Your calm, private and secure personal startpage.
     en_us: Your calm, private and secure personal startpage.
-  thumbnail: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/nestiku.png
+  thumbnail: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/icons/icon-512.png
   tips:
     before_install:
       de_de: >

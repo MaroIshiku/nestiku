@@ -123,7 +123,7 @@ function shell(content, actions = '') {
   return `
     <header class="topbar">
       <div class="topbar-inner">
-        <div class="logo-box" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
+        <div class="logo-box" aria-hidden="true"><img src="/assets/icons/icon-64.png" alt=""></div>
         <div class="title-stack">
           <h1>Nestiku</h1>
           <p>Personal Startpage</p>
@@ -147,7 +147,7 @@ function renderSetup() {
     <main class="auth-screen">
       <section class="card auth-window" role="dialog" aria-modal="true" aria-labelledby="setup-title">
         <div class="brand">
-          <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
+          <div class="logo-large" aria-hidden="true"><img src="/assets/icons/icon-128.png" alt=""></div>
           <div>
             <h1 id="setup-title">Set up admin</h1>
             <p>Create the first administrator account for Nestiku.</p>
@@ -190,7 +190,7 @@ function renderLogin() {
     <main class="auth-screen">
       <section class="card auth-window" aria-labelledby="login-title">
         <div class="brand">
-          <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
+          <div class="logo-large" aria-hidden="true"><img src="/assets/icons/icon-128.png" alt=""></div>
           <div>
             <h1 id="login-title">Nestiku</h1>
             <p>Personal Startpage</p>
@@ -280,7 +280,7 @@ function renderLinks() {
   if (!state.links.length && !state.editingLinks) {
     return `
       <div class="empty tonal-card">
-        <div class="logo-large" aria-hidden="true"><img src="/assets/nestiku.png" alt=""></div>
+        <div class="logo-large" aria-hidden="true"><img src="/assets/icons/icon-128.png" alt=""></div>
         <div>
           <h3 class="card-title">No links yet</h3>
           <p class="card-text">Add your first bookmarks directly from this page.</p>
@@ -825,7 +825,7 @@ function openInfoSheet() {
 function openAboutSheet() {
   openSheet(`
     ${sheetHeader('About Nestiku')}
-    <div class="empty"><div class="logo-large"><img src="/assets/nestiku.png" alt=""></div><div><h3 class="card-title">Nestiku</h3><p class="card-text">Personal Startpage</p></div></div>
+    <div class="empty"><div class="logo-large"><img src="/assets/icons/icon-128.png" alt=""></div><div><h3 class="card-title">Nestiku</h3><p class="card-text">Personal Startpage</p></div></div>
     <div class="technical-card">Internal port: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data path: /data<br>Image: ghcr.io/maroishiku/nestiku</div>
   `);
   bindSheetChrome();

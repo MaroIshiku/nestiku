@@ -1,10 +1,12 @@
 'use strict';
 
 const crypto = require('crypto');
+const argon2 = require('argon2');
 const { promisify } = require('util');
 
 const scrypt = promisify(crypto.scrypt);
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_IDLE_AGE_MS = 24 * 60 * 60 * 1000;
 let sessionSecret = process.env.SESSION_SECRET || '';
 
 function secret() {
@@ -16,17 +18,15 @@ function setSessionSecret(value) {
 }
 
 async function hashPassword(password) {
-  const salt = crypto.randomBytes(16);
-  const N = 16384;
-  const r = 8;
-  const p = 1;
-  const keylen = 64;
-  const hash = await scrypt(password, salt, keylen, { N, r, p });
-  return `scrypt$${N}$${r}$${p}$${salt.toString('base64')}$${hash.toString('base64')}`;
+  return argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 19 * 1024,
+    timeCost: 2,
+    parallelism: 1
+  });
 }
 
-async function verifyPassword(password, stored) {
-  if (typeof password !== 'string' || typeof stored !== 'string') return false;
+async function verifyLegacyScrypt(password, stored) {
   const parts = stored.split('$');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
   const [, , rRaw, pRaw, saltRaw, hashRaw] = parts;
@@ -44,32 +44,28 @@ async function verifyPassword(password, stored) {
   }
 }
 
-function createSession(payload) {
-  const body = Buffer.from(JSON.stringify({
-    ...payload,
-    exp: Date.now() + SESSION_MAX_AGE_MS
-  })).toString('base64url');
-  const sig = crypto.createHmac('sha256', secret()).update(body).digest('base64url');
-  return `${body}.${sig}`;
+async function verifyPassword(password, stored) {
+  if (typeof password !== 'string' || typeof stored !== 'string') return false;
+  if (stored.startsWith('$argon2id$')) {
+    try {
+      return await argon2.verify(stored, password);
+    } catch {
+      return false;
+    }
+  }
+  return verifyLegacyScrypt(password, stored);
 }
 
-function verifySession(cookie) {
-  if (!cookie || typeof cookie !== 'string') return null;
-  const dot = cookie.lastIndexOf('.');
-  if (dot < 1) return null;
-  const body = cookie.slice(0, dot);
-  const sig = cookie.slice(dot + 1);
-  const expected = crypto.createHmac('sha256', secret()).update(body).digest('base64url');
-  const left = Buffer.from(sig);
-  const right = Buffer.from(expected);
-  if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (!payload.exp || payload.exp < Date.now()) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+function needsPasswordRehash(stored) {
+  return typeof stored === 'string' && !stored.startsWith('$argon2id$');
+}
+
+function createSessionToken() {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+function hashSessionToken(token) {
+  return crypto.createHmac('sha256', secret()).update(String(token || '')).digest('base64url');
 }
 
 function timingSafeEqualString(a, b) {
@@ -80,10 +76,12 @@ function timingSafeEqualString(a, b) {
 
 module.exports = {
   SESSION_MAX_AGE_MS,
-  createSession,
+  SESSION_IDLE_AGE_MS,
+  createSessionToken,
+  hashSessionToken,
   hashPassword,
+  needsPasswordRehash,
   setSessionSecret,
   timingSafeEqualString,
-  verifyPassword,
-  verifySession
+  verifyPassword
 };

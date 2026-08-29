@@ -1,0 +1,24 @@
+{
+  "name": "Nestiku",
+  "short_name": "Nestiku",
+  "description": "Private personal startpage with search, weather, bookmarks and settings.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFBFF",
+  "theme_color": "#6F55C8",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

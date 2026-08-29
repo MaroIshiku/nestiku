@@ -12,6 +12,8 @@ node_modules/
 npm-debug.log*
 .DS_Store
 Thumbs.db
+**/__pycache__/
+*-Marlo_Desktop*
 
 # ishiku workspace boundary
 .env
