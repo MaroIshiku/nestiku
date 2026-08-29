@@ -46,7 +46,7 @@ services:
       interval: 30s
       retries: 3
       start_period: 10s
-    image: ghcr.io/maroishiku/nestiku:2.1.0
+    image: ghcr.io/maroishiku/nestiku:2.1.1
     init: true
     labels:
       icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/icons/icon-512.png

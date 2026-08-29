@@ -41,7 +41,7 @@ The container listens on port `8080` internally and publishes the centrally assi
 
 The Compose file is designed for self-hosting and appliance setups:
 
-- image: `ghcr.io/maroishiku/nestiku:2.1.0`
+- image: `ghcr.io/maroishiku/nestiku:2.1.1`
 - long-syntax port mapping `65004 -> 8080`
 - persistent bind mount `/DATA/AppData/nestiku/data -> /data`
 - installer-compatible `SESSION_SECRET` and `ISHIKU_SETUP_SECRET` environment variables

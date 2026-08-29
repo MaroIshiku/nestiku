@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
@@ -41,13 +43,14 @@ jobs:
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          tags: ghcr.io/maroishiku/nestiku:${{ github.ref_name }}
           provenance: mode=max
           sbom: true
       - name: Attest image provenance
         uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ghcr.io/maroishiku/nestiku
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
