@@ -46,8 +46,11 @@ services:
       interval: 30s
       retries: 3
       start_period: 10s
-    image: ghcr.io/maroishiku/nestiku:2.1.1
+    image: ghcr.io/maroishiku/nestiku:2.1.2
     init: true
+    # Start the entrypoint with only the ownership/drop-identity capabilities it
+    # needs. It repairs a fresh ZimaOS bind mount, then execs Node as 10001:10001.
+    user: "0:0"
     labels:
       icon: https://raw.githubusercontent.com/MaroIshiku/nestiku/main/public/assets/icons/icon-512.png
       org.opencontainers.image.description: Private personal startpage with secure first-run setup, link dashboard, search, weather and local JSON storage.
@@ -78,6 +81,8 @@ services:
       - type: bind
         source: /DATA/AppData/nestiku/data
         target: /data
+        bind:
+          selinux: Z
     devices: []
     networks:
       - nestiku
@@ -121,8 +126,9 @@ x-casaos:
 
         Persistent data is stored on the ZimaOS host under
         /DATA/AppData/nestiku/data and is
-        mounted into the container at /data. The container runs read-only,
-        without privileges and as UID/GID 10001.
+        mounted into the container at /data. A restricted startup step repairs
+        mount ownership and SELinux labeling before Nestiku runs as UID/GID
+        10001. The container root filesystem stays read-only.
 
 
         Publish the WebUI through HTTPS if you expose the startpage outside your
@@ -136,8 +142,9 @@ x-casaos:
 
         Persistent data is stored on the ZimaOS host under
         /DATA/AppData/nestiku/data and is
-        mounted into the container at /data. The container runs read-only,
-        without privileges and as UID/GID 10001.
+        mounted into the container at /data. A restricted startup step repairs
+        mount ownership and SELinux labeling before Nestiku runs as UID/GID
+        10001. The container root filesystem stays read-only.
 
 
         Publish the WebUI through HTTPS if you expose the startpage outside your

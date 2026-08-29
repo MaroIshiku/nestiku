@@ -41,7 +41,7 @@ The container listens on port `8080` internally and publishes the centrally assi
 
 The Compose file is designed for self-hosting and appliance setups:
 
-- image: `ghcr.io/maroishiku/nestiku:2.1.1`
+- image: `ghcr.io/maroishiku/nestiku:2.1.2`
 - long-syntax port mapping `65004 -> 8080`
 - persistent bind mount `/DATA/AppData/nestiku/data -> /data`
 - installer-compatible `SESSION_SECRET` and `ISHIKU_SETUP_SECRET` environment variables
@@ -74,8 +74,10 @@ The admin password must be at least 12 characters long and must not match the se
 - setup secret is supplied through `ISHIKU_SETUP_SECRET`
 - session secret is loaded from `SESSION_SECRET` or persisted under `/data/session_secret`
 - favicon requests block local and private target addresses
-- Docker Compose runs the container read-only, without Linux capabilities and with `no-new-privileges`
-- container runs as fixed UID/GID `10001` and only writes to `/data`
+- Docker Compose runs the container read-only, drops all ambient Linux capabilities, and keeps only the three startup capabilities listed below with `no-new-privileges`
+- the entrypoint starts with only `CHOWN`, `SETUID`, and `SETGID`, repairs ownership of a fresh ZimaOS bind mount, then runs Nestiku as fixed UID/GID `10001`
+- the `/data` bind mount uses private SELinux relabeling where supported
+- the application only writes to `/data`
 - CPU, memory and PID limits are set
 - passwords are hashed with Argon2id (19 MiB, two iterations, parallelism one); legacy scrypt hashes are upgraded after a successful sign-in
 - sessions are server-side, revocable, idle-limited and absolute-expiring with CSRF protection
