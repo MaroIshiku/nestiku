@@ -112,15 +112,15 @@
     },
     {
       "path": ".github/workflows/ishiku-pull-request-verify.yml",
-      "sha256": "281c35c191cd93506c0399977cc8e93de264d5e19d916223567476371950832b"
+      "sha256": "7ca10c9f5cdd3d8750f220677b5358b7262d86df6dd69711812881e57c83f159"
     },
     {
       "path": ".github/workflows/ishiku-release-release.yml",
-      "sha256": "2a88c25d0b41cf0c536e101338c22aaa363bd2e556039ea9dc148843a5671b12"
+      "sha256": "a76582f211cb526b129411cce17cf7a4233329b8116327ace4a375b3bce07bd0"
     },
     {
       "path": ".github/workflows/ishiku-upstream-update-upstream-update.yml",
-      "sha256": "a2d6630c1c13ee2e073f50b5ece4706369032db83969b10a5073580372978916"
+      "sha256": "a1807b2a6bd568f1dfe5f5119daef8dad8abfe23f820739ad5367008331136d2"
     },
     {
       "path": ".ishiku/kit/platform.yaml",
@@ -258,6 +258,7 @@
   ],
   "local_changes": [
     ".github/workflows/ishiku-pull-request-verify.yml",
-    ".github/workflows/ishiku-release-release.yml"
+    ".github/workflows/ishiku-release-release.yml",
+    ".github/workflows/ishiku-upstream-update-upstream-update.yml"
   ]
 }
