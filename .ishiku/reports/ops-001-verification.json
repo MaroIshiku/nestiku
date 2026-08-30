@@ -1,1 +1,39 @@
-{"schema_version":1,"timestamp":"2026-08-05T21:34:00Z","application":"nestiku","requirement_id":"OPS-001","status":"verified","fresh_clone":{"build_test_run":true,"structural_and_compliance":true},"lifecycle":{"upgrade_applicable":true,"baseline_note":"Preserved HEAD is not runnable because it references a missing entrypoint; a functional pre-remediation worktree image was used.","baseline_health":true,"upgrade_health":true,"restore_manifest_match":true,"restore_health":true,"marker_restored":true,"secret_in_logs":false},"runtime":{"read_only_root":true,"no_new_privileges":true,"least_privilege_user":"nestiku"}}
+{
+  "schema_version": 1,
+  "timestamp": "2026-08-30T20:13:00Z",
+  "application": "nestiku",
+  "requirement_id": "OPS-001",
+  "status": "verified",
+  "fresh_clone": {
+    "build_test_run": true,
+    "structural_and_compliance": true,
+    "multi_arch_build": [
+      "linux/amd64",
+      "linux/arm64"
+    ]
+  },
+  "lifecycle": {
+    "upgrade_from": "ghcr.io/maroishiku/nestiku:latest@sha256:86aca1a36f8ee752b0ea131e42dfbddf27a37821894550e42c4246e3af891d46",
+    "upgrade_to": "nestiku:2.2.0-verify",
+    "fresh_restrictive_bind": true,
+    "restart_health": true,
+    "upgrade_health": true,
+    "backup_restore_health": true,
+    "account_data_preserved": true,
+    "secret_in_logs": false
+  },
+  "runtime": {
+    "read_only_root": true,
+    "no_new_privileges": true,
+    "application_uid": 10001,
+    "application_effective_capabilities": "0000000000000000",
+    "health_endpoint": "/readyz"
+  },
+  "supply_chain": {
+    "npm_audit_high_or_critical": 0,
+    "trivy_high_or_critical": 0,
+    "trivy_secrets": 0,
+    "grype_high_or_critical": 0,
+    "spdx_packages": 104
+  }
+}

@@ -5,10 +5,14 @@ RUN npm ci --omit=dev --no-audit --no-fund
 
 FROM node:24-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
 WORKDIR /app
+ARG NESTIKU_BUILD_DATE=unknown
+ARG NESTIKU_GIT_SHA=unknown
 ENV NODE_ENV=production \
     PORT=8080 \
     HOST=0.0.0.0 \
-    NESTIKU_DATA_DIR=/data
+    NESTIKU_DATA_DIR=/data \
+    NESTIKU_BUILD_DATE=${NESTIKU_BUILD_DATE} \
+    NESTIKU_GIT_SHA=${NESTIKU_GIT_SHA}
 RUN apk upgrade --no-cache \
     && apk add --no-cache su-exec \
     && addgroup -S -g 10001 nestiku \

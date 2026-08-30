@@ -10,7 +10,9 @@ const SESSION_IDLE_AGE_MS = 24 * 60 * 60 * 1000;
 let sessionSecret = process.env.SESSION_SECRET || '';
 
 function secret() {
-  return sessionSecret || process.env.SESSION_SECRET || 'dev-secret-change-me';
+  const value = sessionSecret || process.env.SESSION_SECRET || '';
+  if (!value) throw new Error('Session secret is not initialized.');
+  return value;
 }
 
 function setSessionSecret(value) {

@@ -11,7 +11,12 @@ export async function api(url, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(data.message || data.error || `HTTP ${response.status}`);
+    error.code = data.code || 'HTTP_ERROR';
+    error.requestId = data.requestId || response.headers.get('X-Request-ID') || '';
+    throw error;
+  }
   if (typeof data.csrfToken === 'string') csrfToken = data.csrfToken;
   if (url === '/api/logout') csrfToken = '';
   return data;

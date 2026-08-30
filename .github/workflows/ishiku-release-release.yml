@@ -3,10 +3,12 @@ name: ishiku release
 on:
   push:
     tags: ['v*.*.*']
-  workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  IMAGE_NAME: ghcr.io/maroishiku/nestiku
 
 jobs:
   verify:
@@ -17,19 +19,13 @@ jobs:
   publish:
     needs: verify
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 30
     permissions:
-      contents: read
+      contents: write
       packages: write
-      id-token: write
-      attestations: write
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
@@ -38,19 +34,38 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-      - name: Build and publish immutable image
-        id: build
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/maroishiku/nestiku:${{ github.ref_name }}
-          provenance: mode=max
-          sbom: true
-      - name: Attest image provenance
-        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
-        with:
-          subject-name: ghcr.io/maroishiku/nestiku
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
+      - name: Promote the verified main image without rebuilding
+        id: promote
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          source_tag="sha-${SOURCE_SHA:0:12}"
+          source_image="${IMAGE_NAME}:${source_tag}"
+          target_image="${IMAGE_NAME}:${RELEASE_TAG}"
+          if docker buildx imagetools inspect "$target_image" >/dev/null 2>&1; then
+            echo "Release image already exists: $target_image" >&2
+            exit 1
+          fi
+          source_digest="$(docker buildx imagetools inspect "$source_image" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          docker buildx imagetools create --tag "$target_image" "${source_image}@${source_digest}"
+          target_digest="$(docker buildx imagetools inspect "$target_image" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          test "$source_digest" = "$target_digest"
+          echo "digest=$target_digest" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_DIGEST: ${{ steps.promote.outputs.digest }}
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<EOF
+          ## Container image
+
+          - Image: \`${IMAGE_NAME}:${GITHUB_REF_NAME}\`
+          - Digest: \`${IMAGE_DIGEST}\`
+          - Platforms: \`linux/amd64\`, \`linux/arm64\`
+          - Verification: the release tag promotes the already verified main-branch digest without rebuilding.
+          - Data compatibility: existing Nestiku JSON data remains compatible; no migration is required.
+          - Rollback: deploy the preceding immutable version tag and keep the existing \`/data\` mount.
+          EOF
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Nestiku ${GITHUB_REF_NAME}" --notes-file "$RUNNER_TEMP/release-notes.md"

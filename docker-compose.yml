@@ -6,6 +6,7 @@ services:
       - ALL
     cap_add:
       - CHOWN
+      - DAC_OVERRIDE
       - SETGID
       - SETUID
     cpus: 0.5
@@ -24,13 +25,13 @@ services:
       - NESTIKU_BIND_ADDRESS=0.0.0.0
       - ISHIKU_DATA_DIR=/data
       - ISHIKU_LOG_LEVEL=info
-      - ISHIKU_SETUP_SECRET=${ISHIKU_SETUP_SECRET:-}
+      - ISHIKU_SETUP_SECRET=replace-with-a-long-random-setup-secret
       - NESTIKU_DATA_DIR=/data
       - NESTIKU_GID=10001
       - NESTIKU_UID=10001
       - NODE_ENV=production
       - PORT=8080
-      - SESSION_SECRET=${SESSION_SECRET:-}
+      - SESSION_SECRET=
       - TZ=Europe/Berlin
     hostname: nestiku
     healthcheck:
@@ -46,9 +47,8 @@ services:
       interval: 30s
       retries: 3
       start_period: 10s
-    image: ghcr.io/maroishiku/nestiku:2.1.2
-    init: true
-    # Start the entrypoint with only the ownership/drop-identity capabilities it
+    image: ghcr.io/maroishiku/nestiku:2.2.0
+    # Start the entrypoint with only the mount-repair/drop-identity capabilities it
     # needs. It repairs a fresh ZimaOS bind mount, then execs Node as 10001:10001.
     user: "0:0"
     labels:

@@ -21,7 +21,9 @@ test('authentication sessions, CSRF, revocation, and rate limiting', { timeout: 
       NODE_ENV: 'test',
       NESTIKU_DATA_DIR: dataDir,
       SESSION_SECRET: 'synthetic-session-secret-for-tests-only',
-      ISHIKU_SETUP_SECRET: 'synthetic-setup-secret-for-tests-only'
+      ISHIKU_SETUP_SECRET: 'synthetic-setup-secret-for-tests-only',
+      NESTIKU_BUILD_DATE: '2026-08-30T00:00:00Z',
+      NESTIKU_GIT_SHA: 'synthetic-sha'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -44,13 +46,22 @@ test('authentication sessions, CSRF, revocation, and rate limiting', { timeout: 
   });
   assert.equal(setup.response.status, 200);
   assert.equal(typeof setup.data.csrfToken, 'string');
+  assert.match(setup.response.headers.get('x-request-id'), /^[0-9a-f-]{36}$/);
   const cookie = setup.response.headers.get('set-cookie').split(';', 1)[0];
 
   const authenticated = await request(origin, '/api/data', { cookie });
   assert.equal(authenticated.response.status, 200);
+  assert.equal(authenticated.data.app.buildDate, '2026-08-30T00:00:00Z');
+  assert.equal(authenticated.data.app.gitSha, 'synthetic-sha');
 
   const rejected = await request(origin, '/api/admin/settings', { method: 'PUT', body: {}, cookie });
   assert.equal(rejected.response.status, 403);
+  assert.deepEqual(
+    Object.keys(rejected.data).sort(),
+    ['code', 'error', 'message', 'requestId'].sort()
+  );
+  assert.equal(rejected.data.code, 'CSRF_INVALID');
+  assert.equal(rejected.data.requestId, rejected.response.headers.get('x-request-id'));
 
   const logout = await request(origin, '/api/logout', {
     method: 'POST',
@@ -73,6 +84,18 @@ test('authentication sessions, CSRF, revocation, and rate limiting', { timeout: 
     body: { username: 'synthetic-admin', password: 'wrong-password' }
   });
   assert.equal(limited.response.status, 429);
+
+  const audit = JSON.parse(await fs.readFile(path.join(dataDir, 'audit.json'), 'utf8'));
+  assert.ok(audit.events.some((event) => event.action === 'setup_register' && event.result === 'success'));
+  assert.ok(audit.events.some((event) => event.action === 'session_revoke' && event.result === 'success'));
+  assert.ok(audit.events.some((event) => event.action === 'sign_in' && event.result === 'failure'));
+  assert.ok(audit.events.some((event) => event.action === 'sign_in' && event.result === 'blocked'));
+  for (const event of audit.events) {
+    assert.equal(typeof event.time, 'string');
+    assert.equal(typeof event.requestId, 'string');
+    assert.equal(Object.hasOwn(event, 'password'), false);
+    assert.equal(Object.hasOwn(event, 'setupSecret'), false);
+  }
 });
 
 async function request(origin, pathname, options = {}) {

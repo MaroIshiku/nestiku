@@ -34,6 +34,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Install Chromium for accessibility and responsive checks
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
       - name: Verify independently cloned app
         env:
           REQUIRE_ALL_VERIFIED: ${{ github.event_name == 'workflow_call' && inputs.require_all_verified }}

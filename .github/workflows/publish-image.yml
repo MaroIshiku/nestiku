@@ -11,6 +11,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/maroishiku/nestiku
+  DOCKER_METADATA_SHORT_SHA_LENGTH: 12
 
 jobs:
   verify:
@@ -51,9 +52,13 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
             type=sha,prefix=sha-
+
+      - name: Resolve reproducible build metadata
+        id: build-meta
+        run: |
+          echo "date=$(git show -s --format=%cI HEAD)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         id: build
@@ -66,6 +71,9 @@ jobs:
           sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NESTIKU_BUILD_DATE=${{ steps.build-meta.outputs.date }}
+            NESTIKU_GIT_SHA=${{ steps.build-meta.outputs.sha }}
 
       - name: Attest image provenance
         uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
@@ -73,3 +81,36 @@ jobs:
           subject-name: ${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+      - name: Smoke-test the published digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          container="nestiku-smoke-${GITHUB_RUN_ID}"
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+          docker run -d --name "$container" -p 127.0.0.1::8080 "${IMAGE_NAME}@${IMAGE_DIGEST}"
+          port="$(docker port "$container" 8080/tcp | sed 's/.*://')"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error "http://127.0.0.1:${port}/readyz" >/dev/null; then
+              break
+            fi
+            if [ "$attempt" = 30 ]; then
+              docker logs "$container"
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$(docker exec "$container" awk '/^Uid:/{print $2}' /proc/1/status)" = "10001"
+
+      - name: Promote the tested digest to main and latest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${IMAGE_NAME}:main" \
+            --tag "${IMAGE_NAME}:latest" \
+            "${IMAGE_NAME}@${IMAGE_DIGEST}"
+          latest_digest="$(docker buildx imagetools inspect "${IMAGE_NAME}:latest" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          test "$latest_digest" = "$IMAGE_DIGEST"

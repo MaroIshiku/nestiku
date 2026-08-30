@@ -1,13 +1,14 @@
 {
   "name": "nestiku",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Nestiku - Personal Startpage",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/server.js && node --check src/auth.js && node --check src/storage.js && npm test"
+    "test:ui": "node node_modules/@playwright/test/cli.js test",
+    "check": "node --check src/server.js && node --check src/auth.js && node --check src/storage.js && npm test && npm run test:ui"
   },
   "engines": {
     "node": ">=24"
@@ -16,5 +17,9 @@
     "argon2": "0.45.1",
     "cookie-parser": "^1.4.7",
     "express": "^4.22.2"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.62.1"
   }
 }

@@ -41,3 +41,9 @@ test('session tokens are random and stored only as keyed hashes', () => {
   assert.notEqual(hashSessionToken(first), first);
   assert.equal(hashSessionToken(first), hashSessionToken(first));
 });
+
+test('session token hashing fails closed before secret initialization', () => {
+  setSessionSecret('');
+  assert.throws(() => hashSessionToken('synthetic-token'), /not initialized/);
+  setSessionSecret('synthetic-session-secret-for-tests-only');
+});

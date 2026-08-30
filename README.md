@@ -41,14 +41,14 @@ The container listens on port `8080` internally and publishes the centrally assi
 
 The Compose file is designed for self-hosting and appliance setups:
 
-- image: `ghcr.io/maroishiku/nestiku:2.1.2`
+- image: `ghcr.io/maroishiku/nestiku:2.2.0`
 - long-syntax port mapping `65004 -> 8080`
 - persistent bind mount `/DATA/AppData/nestiku/data -> /data`
 - installer-compatible `SESSION_SECRET` and `ISHIKU_SETUP_SECRET` environment variables
 - automatic persistent session secret at `/data/session_secret` if `SESSION_SECRET` is empty
 - read-only container with `tmpfs` for `/tmp`
 - `cap_drop: ALL`, `no-new-privileges`, `privileged: false`
-- `cap_add: CHOWN, SETGID, SETUID` for the entrypoint permission handoff
+- `cap_add: CHOWN, DAC_OVERRIDE, SETGID, SETUID` for the entrypoint permission handoff, including restrictive fresh bind directories
 - healthcheck against `/readyz`
 - CasaOS/ZimaOS-style `x-casaos` metadata
 
@@ -75,7 +75,7 @@ The admin password must be at least 12 characters long and must not match the se
 - session secret is loaded from `SESSION_SECRET` or persisted under `/data/session_secret`
 - favicon requests block local and private target addresses
 - Docker Compose runs the container read-only, drops all ambient Linux capabilities, and keeps only the three startup capabilities listed below with `no-new-privileges`
-- the entrypoint starts with only `CHOWN`, `SETUID`, and `SETGID`, repairs ownership of a fresh ZimaOS bind mount, then runs Nestiku as fixed UID/GID `10001`
+- the entrypoint starts with only `CHOWN`, `DAC_OVERRIDE`, `SETUID`, and `SETGID`, repairs ownership of a fresh ZimaOS bind mount, then drops all capabilities and runs Nestiku as fixed UID/GID `10001`
 - the `/data` bind mount uses private SELinux relabeling where supported
 - the application only writes to `/data`
 - CPU, memory and PID limits are set
@@ -83,6 +83,8 @@ The admin password must be at least 12 characters long and must not match the se
 - sessions are server-side, revocable, idle-limited and absolute-expiring with CSRF protection
 - session cookies are `HttpOnly`, `SameSite=Lax` and secure when served behind HTTPS
 - Content Security Policy blocks third-party scripts and frames
+- security-relevant sign-in, credential and session events are retained in `/data/audit.json` with request IDs and without secrets
+- API errors include a stable code, message and request ID while retaining the legacy `error` field for compatibility
 
 ## Health Endpoints
 
@@ -100,6 +102,7 @@ Nestiku stores all mutable data below `/data`:
 /data/settings.json
 /data/links.json
 /data/sessions.json
+/data/audit.json
 /data/icons/
 /data/session_secret
 ```

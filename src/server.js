@@ -7,6 +7,7 @@ const net = require('net');
 const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const packageInfo = require('../package.json');
 
 const JsonStore = require('./storage');
 const {
@@ -25,7 +26,10 @@ const APP = {
   id: 'nestiku',
   name: 'Nestiku',
   subtitle: 'Personal Startpage',
-  description: 'Private startpage with search, weather, bookmarks and settings.'
+  description: 'Private startpage with search, weather, bookmarks and settings.',
+  version: packageInfo.version,
+  buildDate: process.env.NESTIKU_BUILD_DATE || 'development',
+  gitSha: process.env.NESTIKU_GIT_SHA || 'development'
 };
 
 const SEARCH_ENGINES = {
@@ -43,7 +47,7 @@ const DEFAULT_SETTINGS = {
   location: {
     latitude: 53.55073,
     longitude: 9.99302,
-    name: 'Hamburg, Deutschland',
+    name: 'Hamburg, Germany',
     timezone: 'Europe/Berlin'
   },
   weather: { enabled: true, unit: 'celsius', refreshMinutes: 30 },
@@ -81,11 +85,17 @@ const authStore = new JsonStore(path.join(DATA_DIR, 'auth.json'), DEFAULT_AUTH);
 const linksStore = new JsonStore(path.join(DATA_DIR, 'links.json'), DEFAULT_LINKS);
 const settingsStore = new JsonStore(path.join(DATA_DIR, 'settings.json'), DEFAULT_SETTINGS);
 const sessionsStore = new JsonStore(path.join(DATA_DIR, 'sessions.json'), { sessions: [] });
+const auditStore = new JsonStore(path.join(DATA_DIR, 'audit.json'), { events: [] });
 const loginAttempts = new Map();
 
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+app.use((req, res, next) => {
+  req.requestId = clean(req.get('X-Request-ID'), 100) || crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.requestId);
+  next();
+});
 app.use(express.json({ limit: '512kb' }));
 app.use(cookieParser());
 app.use(securityHeaders);
@@ -111,7 +121,7 @@ app.use(express.static(PUBLIC_DIR, {
   }
 }));
 
-app.get('/api/bootstrap', async (req, res) => {
+app.get('/api/bootstrap', asyncRoute(async (req, res) => {
   const [auth, settings] = await Promise.all([ensureAuthState(), settingsStore.read()]);
   const session = await getSession(req);
   const authenticated = !!session && session.user === auth.username && hasAdmin(auth);
@@ -126,25 +136,27 @@ app.get('/api/bootstrap', async (req, res) => {
     themes: THEMES,
     modes: MODES
   });
-});
+}));
 
 app.post('/api/setup/register', async (req, res) => {
   try {
     const auth = await ensureAuthState();
-    if (!isSetupRequired(auth)) return res.status(409).json({ error: 'Setup is already complete.' });
+    if (!isSetupRequired(auth)) return sendError(req, res, 409, 'SETUP_COMPLETE', 'Setup is already complete.');
     const rateKey = `setup:${req.ip || req.socket.remoteAddress || '-'}`;
     if (isLoginRateLimited(rateKey)) {
-      return res.status(429).json({ error: 'Setup is temporarily unavailable. Try again later.' });
+      await audit(req, 'setup_register', clean(req.body && req.body.username, 64) || 'admin', 'blocked');
+      return sendError(req, res, 429, 'SETUP_RATE_LIMITED', 'Setup is temporarily unavailable. Try again later.');
     }
 
     const setupSecret = await readSetupSecret();
-    if (!setupSecret.configured) return res.status(503).json({ error: setupSecret.error });
+    if (!setupSecret.configured) return sendError(req, res, 503, 'SETUP_NOT_CONFIGURED', setupSecret.error);
 
     const body = req.body || {};
     if (!timingSafeEqualString(body.setupSecret, setupSecret.value)) {
       recordFailedLogin(rateKey);
+      await audit(req, 'setup_register', clean(body.username, 64) || 'admin', 'failure');
       await delay(350);
-      return res.status(401).json({ error: 'Setup secret is incorrect.' });
+      return sendError(req, res, 401, 'SETUP_AUTH_FAILED', 'Setup secret is incorrect.');
     }
 
     const username = clean(body.username, 64);
@@ -171,30 +183,35 @@ app.post('/api/setup/register', async (req, res) => {
     await settingsStore.write(validateSettings(settings));
     loginAttempts.delete(rateKey);
     const session = await setSessionCookie(req, res, username);
+    await audit(req, 'setup_register', username, 'success', username);
     res.json({ ok: true, csrfToken: session.csrf });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    await audit(req, 'setup_register', clean(req.body && req.body.username, 64) || 'admin', 'failure');
+    sendError(req, res, 400, 'SETUP_INVALID', error.message);
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', asyncRoute(async (req, res) => {
   const auth = await ensureAuthState();
-  if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup required.' });
+  if (isSetupRequired(auth)) return sendError(req, res, 428, 'SETUP_REQUIRED', 'Setup required.');
   const { username, password } = req.body || {};
   const rateKey = loginRateKey(req, username);
   if (isLoginRateLimited(rateKey)) {
-    return res.status(429).json({ error: 'Sign-in is temporarily unavailable. Try again later.' });
+    await audit(req, 'sign_in', clean(username, 160) || 'unknown', 'blocked');
+    return sendError(req, res, 429, 'AUTH_RATE_LIMITED', 'Sign-in is temporarily unavailable. Try again later.');
   }
   if (typeof username !== 'string' || typeof password !== 'string') {
     recordFailedLogin(rateKey);
+    await audit(req, 'sign_in', clean(username, 160) || 'unknown', 'failure');
     await delay(350);
-    return res.status(401).json({ error: 'Invalid username or password.' });
+    return sendError(req, res, 401, 'AUTH_INVALID', 'Invalid username or password.');
   }
   const ok = adminLoginNameMatches(auth, username) && await verifyPassword(password, auth.passwordHash);
   if (!ok) {
     recordFailedLogin(rateKey);
+    await audit(req, 'sign_in', clean(username, 160) || 'unknown', 'failure');
     await delay(350);
-    return res.status(401).json({ error: 'Invalid username or password.' });
+    return sendError(req, res, 401, 'AUTH_INVALID', 'Invalid username or password.');
   }
   loginAttempts.delete(rateKey);
   if (needsPasswordRehash(auth.passwordHash)) {
@@ -202,16 +219,18 @@ app.post('/api/login', async (req, res) => {
     await authStore.write(auth);
   }
   const session = await setSessionCookie(req, res, auth.username);
+  await audit(req, 'sign_in', auth.username, 'success', auth.username);
   res.json({ ok: true, csrfToken: session.csrf });
-});
+}));
 
-app.post('/api/logout', requireAuth, requireCsrf, async (req, res) => {
+app.post('/api/logout', requireAuth, requireCsrf, asyncRoute(async (req, res) => {
   await revokeSession(req);
+  await audit(req, 'session_revoke', req.authUser || 'admin', 'success', req.authUser || 'admin');
   res.clearCookie(COOKIE_NAME, cookieOptions(req));
   res.json({ ok: true });
-});
+}));
 
-app.get('/api/data', requireAuth, async (req, res) => {
+app.get('/api/data', requireAuth, asyncRoute(async (req, res) => {
   const [auth, settings, linksDoc] = await Promise.all([authStore.read(), settingsStore.read(), linksStore.read()]);
   res.json({
     app: APP,
@@ -222,7 +241,7 @@ app.get('/api/data', requireAuth, async (req, res) => {
     themes: THEMES,
     modes: MODES
   });
-});
+}));
 
 app.use('/api/admin', requireAuth, requireCsrf);
 
@@ -232,7 +251,7 @@ app.put('/api/admin/settings', async (req, res) => {
     await settingsStore.write(settings);
     res.json({ ok: true, settings });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendError(req, res, 400, 'SETTINGS_INVALID', error.message);
   }
 });
 
@@ -242,14 +261,14 @@ app.put('/api/admin/links', async (req, res) => {
     await linksStore.write({ links });
     res.json({ ok: true, count: links.length, links });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendError(req, res, 400, 'LINKS_INVALID', error.message);
   }
 });
 
-app.get('/api/admin/credentials', async (req, res) => {
+app.get('/api/admin/credentials', asyncRoute(async (req, res) => {
   const auth = await authStore.read();
   res.json({ username: auth.username, displayName: auth.displayName || '', email: auth.email || '' });
-});
+}));
 
 app.put('/api/admin/credentials', async (req, res) => {
   try {
@@ -257,7 +276,8 @@ app.put('/api/admin/credentials', async (req, res) => {
     const body = req.body || {};
     if (!await verifyPassword(String(body.currentPassword || ''), auth.passwordHash)) {
       await delay(350);
-      return res.status(401).json({ error: 'Current password is incorrect.' });
+      await audit(req, 'credentials_change', auth.username, 'failure', auth.username);
+      return sendError(req, res, 401, 'REAUTH_FAILED', 'Current password is incorrect.');
     }
     let changed = false;
     const username = clean(body.username, 64);
@@ -288,21 +308,23 @@ app.put('/api/admin/credentials', async (req, res) => {
       auth.passwordHash = await hashPassword(password);
       changed = true;
     }
-    if (!changed) return res.status(400).json({ error: 'No change was detected.' });
+    if (!changed) return sendError(req, res, 400, 'NO_CHANGE', 'No change was detected.');
     await authStore.write(auth);
     const session = await setSessionCookie(req, res, auth.username);
+    await audit(req, wantsPasswordChange ? 'password_change' : 'credentials_change', auth.username, 'success', auth.username);
     res.json({ ok: true, username: auth.username, csrfToken: session.csrf });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    await audit(req, 'credentials_change', req.authUser || 'admin', 'failure', req.authUser || 'admin');
+    sendError(req, res, 400, 'CREDENTIALS_INVALID', error.message);
   }
 });
 
 app.get('/api/admin/geocode', async (req, res) => {
   const q = clean(req.query.q, 80);
-  if (!q) return res.status(400).json({ error: 'Search term is required.' });
+  if (!q) return sendError(req, res, 400, 'SEARCH_REQUIRED', 'Search term is required.');
   try {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=de&format=json`;
-    const response = await fetchWithTimeout(url, { headers: { 'User-Agent': 'nestiku/2.0' } });
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&format=json`;
+    const response = await fetchWithTimeout(url, { headers: { 'User-Agent': `nestiku/${APP.version}` } });
     if (!response.ok) throw new Error(`Geocoding HTTP ${response.status}`);
     const data = await response.json();
     res.json({
@@ -317,24 +339,30 @@ app.get('/api/admin/geocode', async (req, res) => {
       }))
     });
   } catch (error) {
-    res.status(502).json({ error: error.message });
+    sendError(req, res, 502, 'GEOCODE_FAILED', 'Location lookup failed.');
   }
 });
 
 app.get('/api/admin/favicon', async (req, res) => {
   try {
     const result = await cacheFavicon(clean(req.query.url, 2048));
-    if (!result.icon) return res.status(404).json(result);
+    if (!result.icon) return sendError(req, res, 404, 'FAVICON_NOT_FOUND', 'No favicon was found.');
     res.json(result);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    sendError(req, res, 400, 'FAVICON_INVALID', error.message);
   }
 });
 
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Endpoint not found.' });
+  if (req.path.startsWith('/api/')) return sendError(req, res, 404, 'ENDPOINT_NOT_FOUND', 'Endpoint not found.');
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  console.error(`[${req.requestId}]`, error);
+  return sendError(req, res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
 });
 
 ensureSessionSecret()
@@ -452,10 +480,13 @@ async function readSetupSecret() {
 async function requireAuth(req, res, next) {
   try {
     const auth = await ensureAuthState();
-    if (isSetupRequired(auth)) return res.status(428).json({ error: 'Setup required.' });
+    if (isSetupRequired(auth)) return sendError(req, res, 428, 'SETUP_REQUIRED', 'Setup required.');
     const session = await getSession(req);
-    if (session && session.user === auth.username) return next();
-    return res.status(401).json({ error: 'Authentication required.' });
+    if (session && session.user === auth.username) {
+      req.authUser = auth.username;
+      return next();
+    }
+    return sendError(req, res, 401, 'AUTH_REQUIRED', 'Authentication required.');
   } catch (error) {
     return next(error);
   }
@@ -467,7 +498,7 @@ async function requireCsrf(req, res, next) {
     const session = await getSession(req, false);
     const token = req.get('X-CSRF-Token');
     if (session && timingSafeEqualString(token, session.csrf)) return next();
-    return res.status(403).json({ error: 'Request verification failed.' });
+    return sendError(req, res, 403, 'CSRF_INVALID', 'Request verification failed.');
   } catch (error) {
     return next(error);
   }
@@ -566,6 +597,34 @@ function recordFailedLogin(key) {
     : current;
   entry.count += 1;
   loginAttempts.set(key, entry);
+}
+
+function sendError(req, res, status, code, message, fieldErrors) {
+  const payload = { code, message, requestId: req.requestId, error: message };
+  if (fieldErrors) payload.fieldErrors = fieldErrors;
+  return res.status(status).json(payload);
+}
+
+function asyncRoute(handler) {
+  return (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+}
+
+async function audit(req, action, actor, result, target = 'nestiku') {
+  try {
+    const doc = await auditStore.read();
+    const events = Array.isArray(doc.events) ? doc.events : [];
+    events.push({
+      time: new Date().toISOString(),
+      requestId: req.requestId,
+      action,
+      actor: clean(actor, 160) || 'unknown',
+      target: clean(target, 160) || 'nestiku',
+      result
+    });
+    await auditStore.write({ events: events.slice(-2000) });
+  } catch (error) {
+    console.error(`[${req.requestId}] Failed to write security audit event:`, error.message);
+  }
 }
 
 function publicUser(auth, settings) {
@@ -705,7 +764,7 @@ async function cacheFavicon(rawUrl) {
       const response = await fetchPublicWithTimeout(candidate, {
         headers: {
           Accept: 'image/avif,image/webp,image/png,image/svg+xml,image/jpeg,image/x-icon,*/*;q=0.5',
-          'User-Agent': 'nestiku/2.0'
+          'User-Agent': `nestiku/${APP.version}`
         }
       });
       if (!response.ok) continue;
@@ -741,7 +800,7 @@ async function faviconCandidates(pageUrl) {
   let manifestUrls = [];
   try {
     const response = await fetchPublicWithTimeout(pageUrl, {
-      headers: { Accept: 'text/html,*/*;q=0.2', 'User-Agent': 'nestiku/2.0' }
+      headers: { Accept: 'text/html,*/*;q=0.2', 'User-Agent': `nestiku/${APP.version}` }
     });
     const type = (response.headers.get('content-type') || '').toLowerCase();
     if (response.ok && type.includes('text/html')) {
@@ -759,7 +818,7 @@ async function faviconCandidates(pageUrl) {
   for (const manifestUrl of manifestUrls.slice(0, 3)) {
     try {
       const response = await fetchPublicWithTimeout(manifestUrl, {
-        headers: { Accept: 'application/manifest+json,application/json,*/*;q=0.2', 'User-Agent': 'nestiku/2.0' }
+        headers: { Accept: 'application/manifest+json,application/json,*/*;q=0.2', 'User-Agent': `nestiku/${APP.version}` }
       });
       if (!response.ok) continue;
       const manifest = JSON.parse(Buffer.from(await response.arrayBuffer()).slice(0, 128 * 1024).toString('utf8'));

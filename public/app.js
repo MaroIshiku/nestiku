@@ -741,7 +741,8 @@ function openProfileSheet() {
     <button class="account-card profile-card-button" type="button" data-sheet-account><div class="account-avatar">${escapeHTML(initials(state.user.displayName || state.user.username))}</div><div><h3 class="card-title">${escapeHTML(state.user.displayName || state.user.username)}</h3><p class="card-text">@${escapeHTML(state.user.username)}</p></div><span class="support">›</span></button>
     <div class="profile-accordion">
       ${profileSection('appearance', 'Appearance', 'Theme and color mode', appearanceSheetBody(), true)}
-      ${profileSection('admin', 'Settings', 'Profile, search, weather and links', `<button class="button tonal full" type="button" data-sheet-admin>Open full settings</button>`, false)}
+      ${profileSection('sessions', 'Sessions', 'One revocable session per account', `<div class="technical-card">Signing in on another browser revokes the previous session. Use Log out below to revoke this session.</div>`, false)}
+      ${profileSection('admin', 'Administration', 'Profile, search, weather and links', `<button class="button tonal full" type="button" data-sheet-admin>Open full settings</button>`, false)}
       ${profileSection('about', 'About', 'Version, paths and health endpoints', aboutSheetBody(), false)}
       <button class="profile-signout-button" type="button" data-logout>${icon('logout')}<span>Log out</span></button>
     </div>
@@ -787,7 +788,7 @@ function appearanceSheetBody() {
 }
 
 function aboutSheetBody() {
-  return `<div class="technical-card">Internal port: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data path: /data<br>Image: ghcr.io/maroishiku/nestiku</div>`;
+  return `<div class="technical-card">Version: ${escapeHTML(state.app?.version || 'unknown')}<br>Build date: ${escapeHTML(state.app?.buildDate || 'unknown')}<br>Git SHA: ${escapeHTML(state.app?.gitSha || 'unknown')}<br>Internal port: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data path: /data<br>Image: ghcr.io/maroishiku/nestiku</div>`;
 }
 
 function openAccountSheet() {
@@ -826,7 +827,7 @@ function openAboutSheet() {
   openSheet(`
     ${sheetHeader('About Nestiku')}
     <div class="empty"><div class="logo-large"><img src="/assets/icons/icon-128.png" alt=""></div><div><h3 class="card-title">Nestiku</h3><p class="card-text">Personal Startpage</p></div></div>
-    <div class="technical-card">Internal port: 8080<br>Health: /healthz<br>Ready: /readyz<br>Data path: /data<br>Image: ghcr.io/maroishiku/nestiku</div>
+    ${aboutSheetBody()}
   `);
   bindSheetChrome();
 }

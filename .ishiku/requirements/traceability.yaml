@@ -38,7 +38,9 @@
           "tests/server-security.test.js",
           ".ishiku/kit/scripts/compliance-test"
         ],
-        "e2e": [],
+        "e2e": [
+          "tests/ui/design-accessibility.spec.js"
+        ],
         "security": [
           "tests/auth.test.js",
           "tests/server-security.test.js",
@@ -61,7 +63,9 @@
         "integration": [
           ".ishiku/kit/scripts/compliance-test"
         ],
-        "e2e": [],
+        "e2e": [
+          "tests/ui/design-accessibility.spec.js"
+        ],
         "security": [
           ".ishiku/kit/scripts/compliance-test"
         ]
